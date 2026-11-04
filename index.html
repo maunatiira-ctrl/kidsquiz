@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Credit Quiz</title>
+<meta name="description" content="A quiz game for kids aged 6 to 11, following the Australian and New Zealand curriculum.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%AD%90%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: exercise-book page. A ruled paper ground, one wide column; the kid's game is big-button and centred on the card, the parent side is a scannable grid. */
+:root {
+  --paper: #f6f8fc;
+  --rule: #dfe6f3;
+  --card: #ffffff;
+  --ink: #1d2a44;
+  --muted: #5d6a85;
+  --line: #d3dbea;
+  --accent: #2f5bd3;      /* school-ink blue */
+  --accent-soft: #e4ebfc;
+  --crayon: #f2b630;      /* gold for earned credits */
+  --crayon-ink: #6b4a00;
+  --good: #1e8a54; --good-soft: #def3e7;
+  --bad: #c43d3d; --bad-soft: #fbe3e3;
+  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #121826; --rule: #1b2336; --card: #1a2235; --ink: #e8edf8; --muted: #9aa6c0; --line: #2c3650;
+  --accent: #7f9ef5; --accent-soft: #24304f; --crayon: #f5c451; --crayon-ink: #f5c451;
+  --good: #5dd398; --good-soft: #17352a; --bad: #f08a8a; --bad-soft: #3a1f24; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #121826; --rule: #1b2336; --card: #1a2235; --ink: #e8edf8; --muted: #9aa6c0; --line: #2c3650;
+  --accent: #7f9ef5; --accent-soft: #24304f; --crayon: #f5c451; --crayon-ink: #f5c451;
+  --good: #5dd398; --good-soft: #17352a; --bad: #f08a8a; --bad-soft: #3a1f24; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  font-family: var(--body); font-size: 16px; line-height: 1.5; color: var(--ink);
+  background: var(--paper) repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px);
+}
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; margin: 0; text-wrap: balance; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+.brand h1 { white-space: nowrap; }
+.brand h1 { font-size: 2rem; font-weight: 800; color: var(--accent); }
+.brand span { color: var(--muted); font-size: .9rem; }
+.tabs { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.tabs button { border: 0; background: none; padding: 8px 16px; border-radius: 999px; font-weight: 700; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+.sample { font-size: .85rem; color: var(--muted); margin: 0 0 18px; }
+.sample b { color: var(--ink); }
+
+.sheet { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; font-weight: 700; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- kid side ---------- */
+.kids { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; }
+.kidcard { text-align: left; border: 2px solid var(--line); background: var(--card); border-radius: 16px; padding: 18px; display: grid; gap: 6px; }
+.kidcard:hover { border-color: var(--accent); }
+.kidcard .face { font-size: 2.4rem; line-height: 1; }
+.kidcard .name { font-family: var(--display); font-size: 1.5rem; font-weight: 700; }
+.wallet { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.chip.play { background: var(--accent-soft); color: var(--accent); }
+.chip.earn { background: color-mix(in srgb, var(--crayon) 22%, transparent); color: var(--crayon-ink); }
+.chip.grade { background: var(--paper); color: var(--muted); border: 1px solid var(--line); }
+
+.finger { display: grid; justify-items: center; gap: 12px; padding: 24px 0; text-align: center; }
+.pad { width: 120px; height: 120px; border-radius: 50%; border: 3px dashed var(--accent); background: var(--accent-soft); font-size: 3.4rem; display: grid; place-items: center; }
+.pad.scan { animation: pulse 0.9s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .pad.scan { animation: none; } }
+
+.subjects { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+.subj { border: 2px solid var(--line); background: var(--card); border-radius: 14px; padding: 16px 12px; display: grid; justify-items: center; gap: 4px; font-weight: 700; }
+.subj:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.subj:disabled { opacity: .45; cursor: not-allowed; }
+.subj .ico { font-size: 2rem; }
+.costline { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--paper); border: 1px dashed var(--line); font-size: .92rem; }
+
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--line); }
+.dots i.ok { background: var(--good); } .dots i.no { background: var(--bad); } .dots i.now { background: var(--accent); }
+.question { font-family: var(--display); font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 700; margin: 22px 0; text-wrap: balance; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ans { border: 2px solid var(--line); background: var(--card); border-radius: 14px; padding: 16px; font-size: 1.15rem; font-weight: 700; text-align: left; min-height: 64px; }
+.ans:hover:not(:disabled) { border-color: var(--accent); }
+.ans.right { border-color: var(--good); background: var(--good-soft); color: var(--good); }
+.ans.wrong { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.ans:disabled { cursor: default; }
+.feedback { min-height: 2em; margin-top: 14px; font-weight: 700; font-size: 1.1rem; }
+.feedback.ok { color: var(--good); } .feedback.no { color: var(--bad); }
+
+.result { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 10px 0; }
+.result .big { font-family: var(--display); font-size: 3.4rem; font-weight: 800; line-height: 1; color: var(--accent); }
+.coins { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; font-size: 2rem; }
+
+.btn { border: 0; border-radius: 12px; padding: 12px 20px; font-weight: 700; background: var(--accent); color: #fff; }
+.btn.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent-soft); }
+.btn.gold { background: var(--crayon); color: #3d2a00; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ---------- parent side ---------- */
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; display: grid; gap: 12px; align-content: start; }
+.panel h2 { font-size: 1.3rem; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--paper); border-radius: 10px; padding: 8px 10px; }
+.stat b { display: block; font-family: var(--display); font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .75rem; color: var(--muted); }
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1.3fr) 1fr 44px; gap: 8px; align-items: center; font-size: .88rem; }
+.bar .track { display: block; height: 10px; background: var(--paper); border-radius: 99px; overflow: hidden; border: 1px solid var(--line); }
+.bar .fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.bar .fill.lo { background: var(--bad); } .bar .fill.mid { background: var(--crayon); } .bar .fill.hi { background: var(--good); }
+.packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.pack { border: 2px solid var(--line); border-radius: 12px; background: var(--card); padding: 12px; display: grid; gap: 2px; text-align: left; }
+.pack:hover { border-color: var(--accent); }
+.pack b { font-family: var(--display); font-size: 1.4rem; }
+.pack[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+label.f { display: grid; gap: 4px; font-size: .88rem; font-weight: 700; }
+select, input[type=number] { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; }
+.cfg { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.num, th.num { text-align: right; }
+.tablewrap { overflow-x: auto; }
+.lesson-title { font-size: 1.9rem; margin: 18px 0 12px; color: var(--accent); }
+.lesson { display: grid; gap: 10px; max-width: 62ch; }
+.lesson h3 { font-size: 1.45rem; }
+.lesson p { margin: 0; font-size: 1.15rem; }
+.example { border: 2px dashed var(--crayon); border-radius: 14px; padding: 12px 16px; background: color-mix(in srgb, var(--crayon) 10%, var(--card)); display: grid; gap: 4px; }
+.example p { font-family: var(--display); font-size: 1.3rem; font-weight: 700; }
+.toast { padding: 10px 14px; border-radius: 10px; background: var(--good-soft); color: var(--good); font-weight: 700; }
+.confirm { border: 2px solid var(--accent); border-radius: 12px; padding: 12px; background: var(--accent-soft); display: grid; gap: 8px; }
+@media (max-width: 480px) { .sheet { padding: 18px; } .bar { grid-template-columns: minmax(0, 1.4fr) 1fr 40px; } .stats { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+input[type=text], input[type=password] { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; }
+.pin { display: grid; gap: 12px; max-width: 360px; }
+.tabs[hidden] { display: none; }
+.pin input[type=password] { font-size: 1.6rem; letter-spacing: .4em; text-align: center; }
+.err { padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-weight: 700; }
+.faces { display: flex; flex-wrap: wrap; gap: 6px; }
+.faces button { font-size: 1.6rem; border: 2px solid var(--line); background: var(--card); border-radius: 12px; padding: 4px 8px; }
+.faces button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.ok-chip { color: var(--good); font-weight: 700; font-size: .88rem; }
+footer.note { font-size: .8rem; color: var(--muted); margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Credit Quiz</h1><span>Ages 6–11 · Australia &amp; New Zealand</span></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabKid" aria-selected="true">Kid's game</button>
+      <button role="tab" id="tabParent" aria-selected="false">Parent dashboard</button>
+    </div>
+  </header>
+  <main id="view"></main>
+  <footer class="note">Progress is saved on this device only. Purchases are pretend for now.</footer>
+</div>
+
+<script>
+const BANK = {"subjects": [{"id": "maths", "name": "Maths", "emoji": "➕"}, {"id": "english", "name": "English", "emoji": "📖"}, {"id": "social", "name": "HASS / Social Sciences", "emoji": "🌏"}, {"id": "health", "name": "Health & PE", "emoji": "🍎"}, {"id": "science", "name": "Science", "emoji": "🔬"}], "questions": [{"grade": 1, "subject": "english", "region": "all", "question": "Which word starts with the letter B?", "answers": ["Ball", "Cat", "Dog", "Fish"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which word rhymes with 'cat'?", "answers": ["Hat", "Cup", "Sun", "Pig"]}, {"grade": 1, "subject": "english", "region": "all", "question": "How many letters are in the word 'dog'?", "answers": ["3", "2", "4", "5"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which one is a colour?", "answers": ["Red", "Run", "Ten", "Jump"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which letter comes after A?", "answers": ["B", "C", "D", "Z"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which word has the 'sh' sound?", "answers": ["Ship", "Sip", "Hip", "Tip"]}, {"grade": 1, "subject": "english", "region": "all", "question": "What goes at the end of a telling sentence?", "answers": ["A full stop", "A comma", "A question mark", "Nothing"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which word is a name, so it starts with a capital letter?", "answers": ["Sam", "dog", "tree", "ball"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which word rhymes with 'bed'?", "answers": ["Red", "Bad", "Bid", "Bud"]}, {"grade": 1, "subject": "english", "region": "all", "question": "Which word is spelt correctly?", "answers": ["Said", "Sed", "Siad", "Sayd"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word is the opposite of 'big'?", "answers": ["Small", "Tall", "Huge", "Wide"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word is a noun (a naming word)?", "answers": ["Table", "Quickly", "Blue", "Run"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which sentence is correct?", "answers": ["I am happy.", "i am happy", "I am happy", "am I happy."]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word rhymes with 'light'?", "answers": ["Night", "Late", "Lift", "Leaf"]}, {"grade": 2, "subject": "english", "region": "all", "question": "What goes at the end of a question?", "answers": ["A question mark", "A full stop", "A comma", "An apostrophe"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word is spelt correctly?", "answers": ["Friend", "Freind", "Frend", "Frien"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word joins two ideas: 'I like cats ___ I like dogs'?", "answers": ["and", "the", "is", "on"]}, {"grade": 2, "subject": "english", "region": "all", "question": "In a story, who are the characters?", "answers": ["The people or animals in it", "The page numbers", "The title", "The pictures only"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word has two syllables?", "answers": ["Rabbit", "Cat", "Dog", "Fish"]}, {"grade": 2, "subject": "english", "region": "all", "question": "Which word means more than one?", "answers": ["Apples", "Apple", "An apple", "Appled"]}, {"grade": 3, "subject": "english", "region": "all", "question": "What is the past tense of 'run'?", "answers": ["Ran", "Runned", "Runs", "Running"]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which word is a verb (a doing word)?", "answers": ["Jump", "Chair", "Green", "Happy"]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which word means the same as 'happy'?", "answers": ["Glad", "Sad", "Angry", "Tired"]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which word is an adjective (a describing word)?", "answers": ["Soft", "Sing", "Dog", "Under"]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which word is spelt the Australian and New Zealand way?", "answers": ["Colour", "Color", "Colur", "Coluor"]}, {"grade": 3, "subject": "english", "region": "all", "question": "What is a contraction of 'do not'?", "answers": ["Don't", "Dont'", "Do'nt", "Dont"]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which is a fact, not an opinion?", "answers": ["Kangaroos have a pouch.", "Kangaroos are the best animal.", "Pizza is yummy.", "Blue is the nicest colour."]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which punctuation shows someone is speaking?", "answers": ["Speech marks", "A full stop", "A comma", "Brackets"]}, {"grade": 3, "subject": "english", "region": "all", "question": "Which word has a prefix that means 'not'?", "answers": ["Unhappy", "Happily", "Happiness", "Happier"]}, {"grade": 3, "subject": "english", "region": "all", "question": "What is the main idea of a text?", "answers": ["What it is mostly about", "The first word", "The last page", "The author's name"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Which word is spelt correctly?", "answers": ["Because", "Becuase", "Becaus", "Beacause"]}, {"grade": 4, "subject": "english", "region": "all", "question": "What is the opposite of 'ancient'?", "answers": ["Modern", "Old", "Dusty", "Broken"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Which word is an adverb?", "answers": ["Quietly", "Quiet", "Quietness", "Quieter"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Choose the correct word: 'They ___ playing footy.'", "answers": ["are", "is", "am", "be"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Which is a compound word?", "answers": ["Sunflower", "Flower", "Sunny", "Flowering"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Which word is a homophone of 'sea'?", "answers": ["See", "Saw", "Say", "Seal"]}, {"grade": 4, "subject": "english", "region": "all", "question": "What does a glossary in a book tell you?", "answers": ["What hard words mean", "Who wrote it", "The price", "The page numbers only"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Which sentence uses an apostrophe to show ownership?", "answers": ["That is Mia's hat.", "That is Mias hat.", "That is Mias' hat.", "That is Mia hat's."]}, {"grade": 4, "subject": "english", "region": "all", "question": "What is the purpose of a persuasive text?", "answers": ["To convince the reader", "To tell a funny story", "To list ingredients", "To give a weather report"]}, {"grade": 4, "subject": "english", "region": "all", "question": "Which word is a conjunction?", "answers": ["Because", "Quickly", "Green", "Kitten"]}, {"grade": 5, "subject": "english", "region": "all", "question": "What is a synonym for 'enormous'?", "answers": ["Huge", "Tiny", "Narrow", "Quick"]}, {"grade": 5, "subject": "english", "region": "all", "question": "Choose the correct word: 'I can't find ___ book.'", "answers": ["my", "mine", "me", "I"]}, {"grade": 5, "subject": "english", "region": "all", "question": "'The wind whispered through the trees' is an example of…", "answers": ["Personification", "A question", "A list", "A rhyme"]}, {"grade": 5, "subject": "english", "region": "all", "question": "Which word is a pronoun?", "answers": ["She", "Run", "Blue", "Table"]}, {"grade": 5, "subject": "english", "region": "all", "question": "Which sentence uses 'their' correctly?", "answers": ["They lost their ball.", "Their going home.", "Put it over their.", "Their is a cat."]}, {"grade": 5, "subject": "english", "region": "all", "question": "Which word is spelt the Australian and New Zealand way?", "answers": ["Centre", "Center", "Centr", "Sentre"]}, {"grade": 5, "subject": "english", "region": "all", "question": "What is the suffix in 'careful'?", "answers": ["-ful", "care-", "-are", "c-"]}, {"grade": 5, "subject": "english", "region": "all", "question": "Which text type gives step-by-step instructions?", "answers": ["A procedure", "A narrative", "A poem", "A recount"]}, {"grade": 5, "subject": "english", "region": "all", "question": "Which word is a preposition?", "answers": ["Under", "Jump", "Happy", "Slowly"]}, {"grade": 5, "subject": "english", "region": "all", "question": "'Buzz' and 'splash' are examples of…", "answers": ["Onomatopoeia", "Similes", "Pronouns", "Prefixes"]}, {"grade": 6, "subject": "english", "region": "all", "question": "What is an antonym for 'generous'?", "answers": ["Selfish", "Kind", "Giving", "Friendly"]}, {"grade": 6, "subject": "english", "region": "all", "question": "'As brave as a lion' is an example of…", "answers": ["A simile", "A metaphor", "An idiom", "A pronoun"]}, {"grade": 6, "subject": "english", "region": "all", "question": "Which word is spelt correctly?", "answers": ["Necessary", "Neccessary", "Necesary", "Neccesary"]}, {"grade": 6, "subject": "english", "region": "all", "question": "Which is the subject in 'The dog chased the ball'?", "answers": ["The dog", "chased", "the ball", "ball"]}, {"grade": 6, "subject": "english", "region": "all", "question": "Which sentence is in the passive voice?", "answers": ["The cake was eaten by Sam.", "Sam ate the cake.", "Sam is eating cake.", "Sam will eat cake."]}, {"grade": 6, "subject": "english", "region": "all", "question": "'It's raining cats and dogs' is an example of…", "answers": ["An idiom", "A simile", "A fact", "A question"]}, {"grade": 6, "subject": "english", "region": "all", "question": "Which word is spelt the Australian and New Zealand way?", "answers": ["Organise", "Organize", "Organyse", "Orginise"]}, {"grade": 6, "subject": "english", "region": "all", "question": "What is a 'complex sentence'?", "answers": ["A sentence with a main clause and a dependent clause", "A very long word", "A sentence with no verb", "A question"]}, {"grade": 6, "subject": "english", "region": "all", "question": "Which word has the Greek root 'tele' meaning far?", "answers": ["Telescope", "Table", "Tell", "Tent"]}, {"grade": 6, "subject": "english", "region": "all", "question": "Which is an example of a metaphor?", "answers": ["The classroom was a zoo.", "The classroom was like a zoo.", "The classroom was noisy.", "The zoo had lions."]}, {"grade": 1, "subject": "health", "region": "all", "question": "Which food is the healthiest snack?", "answers": ["An apple", "Lollies", "Chips", "Soft drink"]}, {"grade": 1, "subject": "health", "region": "all", "question": "When should you wash your hands?", "answers": ["Before eating", "Never", "Only on Sundays", "Only after sleeping"]}, {"grade": 1, "subject": "health", "region": "all", "question": "How many times a day should you brush your teeth?", "answers": ["2", "0", "Once a week", "10"]}, {"grade": 1, "subject": "health", "region": "all", "question": "What should you drink most?", "answers": ["Water", "Soft drink", "Cordial", "Milkshakes"]}, {"grade": 1, "subject": "health", "region": "all", "question": "What helps your body grow and rest?", "answers": ["Sleep", "Screens", "Lollies", "Staying up late"]}, {"grade": 1, "subject": "health", "region": "all", "question": "What should you wear outside on a sunny day?", "answers": ["A hat", "Gloves", "A scarf", "Nothing on your head"]}, {"grade": 1, "subject": "health", "region": "all", "question": "Who is a trusted adult you can tell if you feel unsafe?", "answers": ["A parent or teacher", "A stranger online", "Nobody", "A person you just met"]}, {"grade": 1, "subject": "health", "region": "all", "question": "Which body part do you use to smell?", "answers": ["Nose", "Elbow", "Knee", "Ear"]}, {"grade": 1, "subject": "health", "region": "all", "question": "What should you do before crossing the road?", "answers": ["Stop, look and listen", "Run across", "Close your eyes", "Look at your phone"]}, {"grade": 1, "subject": "health", "region": "all", "question": "How can you show kindness to a friend?", "answers": ["Share and take turns", "Push in", "Take their toys", "Ignore them"]}, {"grade": 2, "subject": "health", "region": "all", "question": "Which food group gives us strong bones?", "answers": ["Dairy (milk, cheese)", "Lollies", "Chips", "Soft drinks"]}, {"grade": 2, "subject": "health", "region": "all", "question": "What should you wear when riding a bike?", "answers": ["A helmet", "Sunglasses only", "Thongs", "A beanie"]}, {"grade": 2, "subject": "health", "region": "all", "question": "Why do we cover our mouth when we cough?", "answers": ["To stop germs spreading", "To be quiet", "To keep warm", "No reason"]}, {"grade": 2, "subject": "health", "region": "all", "question": "Which activity is good exercise?", "answers": ["Playing tag", "Watching TV", "Sleeping all day", "Playing on a tablet"]}, {"grade": 2, "subject": "health", "region": "all", "question": "Which is a vegetable?", "answers": ["Carrot", "Banana", "Bread", "Cheese"]}, {"grade": 2, "subject": "health", "region": "all", "question": "Where is the safest place to swim at the beach?", "answers": ["Between the red and yellow flags", "Near the rocks", "Wherever you like", "Far from the lifeguards"]}, {"grade": 2, "subject": "health", "region": "all", "question": "What should you do if you feel sad?", "answers": ["Talk to someone you trust", "Keep it secret forever", "Hit something", "Stop eating"]}, {"grade": 2, "subject": "health", "region": "all", "question": "What does 'Slip, Slop, Slap' remind us to do?", "answers": ["Protect our skin from the sun", "Wash the dishes", "Tidy our room", "Brush our hair"]}, {"grade": 2, "subject": "health", "region": "all", "question": "Why should you wear a seatbelt in the car?", "answers": ["To keep you safe if the car stops suddenly", "To look cool", "It makes the car faster", "It keeps you warm"]}, {"grade": 2, "subject": "health", "region": "all", "question": "What is a good thing to do when you lose a game?", "answers": ["Say 'good game' to the winner", "Cry and shout", "Throw the ball away", "Quit forever"]}, {"grade": 3, "subject": "health", "region": "all", "question": "How long should you brush your teeth?", "answers": ["About 2 minutes", "5 seconds", "20 minutes", "1 hour"]}, {"grade": 3, "subject": "health", "region": "all", "question": "Which nutrient helps build muscles?", "answers": ["Protein", "Sugar", "Salt", "Fat only"]}, {"grade": 3, "subject": "health", "region": "all", "question": "About how much sleep do children need each night?", "answers": ["9 to 12 hours", "3 hours", "5 hours", "15 to 18 hours"]}, {"grade": 3, "subject": "health", "region": "all", "question": "What does sunscreen protect you from?", "answers": ["Sunburn", "Rain", "Cold", "Insects"]}, {"grade": 3, "subject": "health", "region": "all", "question": "Which drink has the most sugar?", "answers": ["Soft drink", "Water", "Plain milk", "Unsweetened tea"]}, {"grade": 3, "subject": "health", "region": "all", "question": "What does SPF on sunscreen tell you?", "answers": ["How well it protects from the sun", "How it smells", "Its colour", "Its price"]}, {"grade": 3, "subject": "health", "region": "all", "question": "What number do you call in an emergency in Australia?", "answers": ["000", "111", "911", "999"]}, {"grade": 3, "subject": "health", "region": "all", "question": "What should you do if someone online asks for your address?", "answers": ["Not tell them and tell a trusted adult", "Tell them", "Send a photo of your house", "Keep it a secret"]}, {"grade": 3, "subject": "health", "region": "all", "question": "Which is a good way to warm up before sport?", "answers": ["Gentle jogging and stretching", "Eating a big meal", "Sitting still", "Sprinting straight away"]}, {"grade": 3, "subject": "health", "region": "all", "question": "What is a 'growth mindset'?", "answers": ["Believing you can get better by practising", "Thinking you can never improve", "Only liking easy things", "Giving up quickly"]}, {"grade": 4, "subject": "health", "region": "all", "question": "How many serves of fruit and vegetables should you aim for each day?", "answers": ["At least 5", "1", "0", "Only on weekends"]}, {"grade": 4, "subject": "health", "region": "all", "question": "What does your heart do?", "answers": ["Pumps blood around the body", "Helps you think", "Digests food", "Helps you see"]}, {"grade": 4, "subject": "health", "region": "all", "question": "Which is a good way to calm down when angry?", "answers": ["Take deep breaths", "Shout at someone", "Throw things", "Hit a wall"]}, {"grade": 4, "subject": "health", "region": "all", "question": "Why is exercise good for you?", "answers": ["It keeps your heart and muscles strong", "It makes you sleepy forever", "It stops you growing", "It has no effect"]}, {"grade": 4, "subject": "health", "region": "all", "question": "What should you do if a stranger offers you a ride?", "answers": ["Say no and tell a trusted adult", "Get in the car", "Ask for lollies", "Keep it secret"]}, {"grade": 4, "subject": "health", "region": "all", "question": "What is bullying?", "answers": ["Hurting someone again and again on purpose", "Playing a fair game", "Helping a friend", "Saying sorry"]}, {"grade": 4, "subject": "health", "region": "all", "question": "What number do you call in an emergency in New Zealand?", "answers": ["111", "000", "911", "999"]}, {"grade": 4, "subject": "health", "region": "all", "question": "Which part of a food label shows how much sugar is in it?", "answers": ["Nutrition information panel", "The brand name", "The barcode", "The picture"]}, {"grade": 4, "subject": "health", "region": "all", "question": "What is a good reason to drink water during sport?", "answers": ["To stay hydrated", "To get hungry", "To slow down", "To feel cold"]}, {"grade": 4, "subject": "health", "region": "all", "question": "What should you do if you see someone being bullied?", "answers": ["Tell a teacher or trusted adult", "Join in", "Laugh", "Film it"]}, {"grade": 5, "subject": "health", "region": "all", "question": "Which vitamin does your body make from sunlight?", "answers": ["Vitamin D", "Vitamin C", "Vitamin A", "Vitamin B12"]}, {"grade": 5, "subject": "health", "region": "all", "question": "Which organ helps you breathe?", "answers": ["The lungs", "The stomach", "The liver", "The kidneys"]}, {"grade": 5, "subject": "health", "region": "all", "question": "What is a balanced diet?", "answers": ["Eating a variety of foods from all groups", "Eating only fruit", "Eating only meat", "Skipping meals"]}, {"grade": 5, "subject": "health", "region": "all", "question": "Which habit keeps your teeth healthy?", "answers": ["Flossing", "Eating lots of lollies", "Not brushing", "Drinking soft drink"]}, {"grade": 5, "subject": "health", "region": "all", "question": "About how much physical activity should kids get each day?", "answers": ["60 minutes", "5 minutes", "None", "8 hours"]}, {"grade": 5, "subject": "health", "region": "all", "question": "What changes happen in puberty?", "answers": ["The body grows and changes into an adult's", "Nothing changes", "You get shorter", "Your eyes change colour"]}, {"grade": 5, "subject": "health", "region": "all", "question": "What is peer pressure?", "answers": ["Feeling pushed by friends to do something", "A type of exercise", "A sports rule", "A healthy food"]}, {"grade": 5, "subject": "health", "region": "all", "question": "What does 'consent' mean?", "answers": ["Giving permission", "Saying sorry", "Running fast", "Being bored"]}, {"grade": 5, "subject": "health", "region": "all", "question": "Which is the best way to keep your private information safe online?", "answers": ["Use strong passwords and don't share them", "Share passwords with friends", "Post your address", "Use '1234' as a password"]}, {"grade": 5, "subject": "health", "region": "all", "question": "What do the Australian Guide to Healthy Eating and NZ Eating Guidelines both say to eat lots of?", "answers": ["Vegetables", "Lollies", "Chips", "Cake"]}, {"grade": 6, "subject": "health", "region": "all", "question": "Which food is a good source of fibre?", "answers": ["Wholegrain bread", "White sugar", "Butter", "Soft drink"]}, {"grade": 6, "subject": "health", "region": "all", "question": "What is the main job of white blood cells?", "answers": ["Fighting germs", "Carrying oxygen", "Making bones", "Digesting food"]}, {"grade": 6, "subject": "health", "region": "all", "question": "Which habit is best for your mental health?", "answers": ["Talking about your feelings", "Keeping everything secret", "Never sleeping", "Being online all night"]}, {"grade": 6, "subject": "health", "region": "all", "question": "Why should you read food labels?", "answers": ["To know what is in your food", "To learn the price", "For fun only", "They don't matter"]}, {"grade": 6, "subject": "health", "region": "all", "question": "What does 'hydration' mean?", "answers": ["Having enough water in your body", "Eating lots of salt", "Running fast", "Sleeping well"]}, {"grade": 6, "subject": "health", "region": "all", "question": "Which is a sign of a healthy friendship?", "answers": ["Respecting each other's choices", "Always doing what one person says", "Teasing each other", "Keeping harmful secrets"]}, {"grade": 6, "subject": "health", "region": "all", "question": "What is a 'digital footprint'?", "answers": ["The trail of what you do online", "A shoe size", "A computer virus", "A type of mouse"]}, {"grade": 6, "subject": "health", "region": "all", "question": "What happens to your heart rate when you exercise?", "answers": ["It goes up", "It stops", "It goes down", "It stays exactly the same"]}, {"grade": 6, "subject": "health", "region": "all", "question": "Which is a good strategy for managing stress?", "answers": ["Exercise, sleep and talking to someone", "Skipping meals", "Staying up all night", "Ignoring everyone"]}, {"grade": 6, "subject": "health", "region": "all", "question": "What is first aid?", "answers": ["Help given to an injured person before a doctor arrives", "A type of medicine", "The first meal of the day", "A sports team"]}, {"grade": 1, "subject": "science", "region": "all", "question": "Which animal can fly?", "answers": ["A bird", "A dog", "A fish", "A cow"]}, {"grade": 1, "subject": "science", "region": "all", "question": "What do plants need to grow?", "answers": ["Water and sunlight", "Chocolate", "Toys", "Darkness only"]}, {"grade": 1, "subject": "science", "region": "all", "question": "What is ice made of?", "answers": ["Frozen water", "Sugar", "Glass", "Salt"]}, {"grade": 1, "subject": "science", "region": "all", "question": "Which season is usually the coldest?", "answers": ["Winter", "Summer", "Spring", "Autumn"]}, {"grade": 1, "subject": "science", "region": "all", "question": "How many legs does a spider have?", "answers": ["8", "6", "4", "10"]}, {"grade": 1, "subject": "science", "region": "all", "question": "Which baby animal grows in its mother's pouch?", "answers": ["A joey", "A puppy", "A chick", "A calf"]}, {"grade": 1, "subject": "science", "region": "all", "question": "What do we see in the sky at night?", "answers": ["The Moon and stars", "The Sun", "Rainbows only", "Clouds only"]}, {"grade": 1, "subject": "science", "region": "all", "question": "Which material is see-through?", "answers": ["Glass", "Wood", "Brick", "Metal"]}, {"grade": 1, "subject": "science", "region": "all", "question": "Which sense do you use to hear?", "answers": ["Hearing", "Taste", "Smell", "Touch"]}, {"grade": 1, "subject": "science", "region": "all", "question": "What happens to ice cream on a hot day?", "answers": ["It melts", "It grows", "It freezes", "It turns blue"]}, {"grade": 2, "subject": "science", "region": "all", "question": "What does a caterpillar turn into?", "answers": ["A butterfly", "A spider", "A bird", "A frog"]}, {"grade": 2, "subject": "science", "region": "all", "question": "Which is a living thing?", "answers": ["A tree", "A rock", "A chair", "A cup"]}, {"grade": 2, "subject": "science", "region": "all", "question": "What gives us light during the day?", "answers": ["The Sun", "The Moon", "Stars", "Clouds"]}, {"grade": 2, "subject": "science", "region": "all", "question": "Which material is magnetic?", "answers": ["Iron", "Wood", "Plastic", "Paper"]}, {"grade": 2, "subject": "science", "region": "all", "question": "What do fish breathe through?", "answers": ["Gills", "Lungs", "Ears", "Fins"]}, {"grade": 2, "subject": "science", "region": "all", "question": "What does a push or a pull do to an object?", "answers": ["Makes it move or change", "Makes it disappear", "Makes it hot", "Nothing at all"]}, {"grade": 2, "subject": "science", "region": "all", "question": "Where does rain come from?", "answers": ["Clouds", "The ground", "Trees", "The Sun"]}, {"grade": 2, "subject": "science", "region": "all", "question": "What do we call a baby frog?", "answers": ["A tadpole", "A kitten", "A cub", "A foal"]}, {"grade": 2, "subject": "science", "region": "all", "question": "Which object would float in water?", "answers": ["A cork", "A rock", "A coin", "A key"]}, {"grade": 2, "subject": "science", "region": "all", "question": "Which part of the Earth do we live on?", "answers": ["The land on its surface", "The centre", "The Moon", "Under the ocean floor"]}, {"grade": 3, "subject": "science", "region": "all", "question": "What are the three states of matter?", "answers": ["Solid, liquid, gas", "Hot, cold, warm", "Big, medium, small", "Rock, paper, scissors"]}, {"grade": 3, "subject": "science", "region": "all", "question": "Which planet do we live on?", "answers": ["Earth", "Mars", "Jupiter", "Venus"]}, {"grade": 3, "subject": "science", "region": "all", "question": "What part of a plant takes in water from the soil?", "answers": ["The roots", "The petals", "The leaves", "The flowers"]}, {"grade": 3, "subject": "science", "region": "all", "question": "What causes day and night?", "answers": ["The Earth spinning", "The Sun turning off", "Clouds moving", "The Moon blocking the Sun"]}, {"grade": 3, "subject": "science", "region": "all", "question": "Which animal is a mammal?", "answers": ["A whale", "A shark", "A lizard", "A frog"]}, {"grade": 3, "subject": "science", "region": "all", "question": "How do we measure temperature?", "answers": ["With a thermometer", "With a ruler", "With scales", "With a clock"]}, {"grade": 3, "subject": "science", "region": "all", "question": "What happens to water when it is heated a lot?", "answers": ["It turns into steam", "It turns into ice", "It turns into sand", "Nothing"]}, {"grade": 3, "subject": "science", "region": "all", "question": "Which group do living things with feathers belong to?", "answers": ["Birds", "Reptiles", "Fish", "Insects"]}, {"grade": 3, "subject": "science", "region": "all", "question": "What is a 'fair test' in science?", "answers": ["Changing only one thing at a time", "Changing everything at once", "Guessing the answer", "Doing it only once"]}, {"grade": 3, "subject": "science", "region": "all", "question": "How does heat move from a hot cup to your hand?", "answers": ["By touching (conduction)", "By magic", "By sound", "It doesn't"]}, {"grade": 4, "subject": "science", "region": "all", "question": "What gas do plants take in from the air?", "answers": ["Carbon dioxide", "Oxygen", "Helium", "Neon"]}, {"grade": 4, "subject": "science", "region": "all", "question": "What is the closest star to Earth?", "answers": ["The Sun", "The Moon", "Polaris", "Sirius"]}, {"grade": 4, "subject": "science", "region": "all", "question": "Which of these conducts electricity best?", "answers": ["Copper", "Rubber", "Wood", "Plastic"]}, {"grade": 4, "subject": "science", "region": "all", "question": "What do we call animals that eat only plants?", "answers": ["Herbivores", "Carnivores", "Omnivores", "Predators"]}, {"grade": 4, "subject": "science", "region": "all", "question": "At what temperature does water freeze?", "answers": ["0 °C", "10 °C", "50 °C", "100 °C"]}, {"grade": 4, "subject": "science", "region": "all", "question": "What force slows down a sliding object?", "answers": ["Friction", "Gravity", "Magnetism", "Light"]}, {"grade": 4, "subject": "science", "region": "all", "question": "What does a life cycle show?", "answers": ["The stages of a living thing's life", "The weather each day", "How to ride a bike", "A map of a city"]}, {"grade": 4, "subject": "science", "region": "all", "question": "What is erosion?", "answers": ["Wearing away of rock and soil by wind or water", "Rocks growing bigger", "Plants making food", "Ice melting"]}, {"grade": 4, "subject": "science", "region": "all", "question": "In a food chain, what usually comes first?", "answers": ["A plant", "A hawk", "A shark", "A lion"]}, {"grade": 4, "subject": "science", "region": "all", "question": "Which material is a natural material?", "answers": ["Wool", "Plastic", "Nylon", "Glass"]}, {"grade": 5, "subject": "science", "region": "all", "question": "What is the largest planet in our solar system?", "answers": ["Jupiter", "Saturn", "Earth", "Neptune"]}, {"grade": 5, "subject": "science", "region": "all", "question": "What process do plants use to make food from sunlight?", "answers": ["Photosynthesis", "Evaporation", "Digestion", "Erosion"]}, {"grade": 5, "subject": "science", "region": "all", "question": "Which organ pumps blood through the body?", "answers": ["The heart", "The brain", "The lungs", "The stomach"]}, {"grade": 5, "subject": "science", "region": "all", "question": "What is it called when water turns into vapour?", "answers": ["Evaporation", "Condensation", "Freezing", "Melting"]}, {"grade": 5, "subject": "science", "region": "all", "question": "How long does Earth take to go around the Sun?", "answers": ["About 365 days", "24 hours", "30 days", "10 years"]}, {"grade": 5, "subject": "science", "region": "all", "question": "Why do we see the Moon shining?", "answers": ["It reflects light from the Sun", "It makes its own light", "It is on fire", "It is a star"]}, {"grade": 5, "subject": "science", "region": "all", "question": "What is an adaptation?", "answers": ["A feature that helps a living thing survive", "A type of rock", "A weather pattern", "A machine"]}, {"grade": 5, "subject": "science", "region": "all", "question": "How does light travel?", "answers": ["In straight lines", "In circles", "Only around corners", "It doesn't move"]}, {"grade": 5, "subject": "science", "region": "all", "question": "What does a solar panel turn sunlight into?", "answers": ["Electricity", "Water", "Wind", "Sound"]}, {"grade": 5, "subject": "science", "region": "all", "question": "Which is a gas at room temperature?", "answers": ["Oxygen", "Iron", "Water", "Salt"]}, {"grade": 6, "subject": "science", "region": "all", "question": "What is the chemical symbol for water?", "answers": ["H₂O", "CO₂", "O₂", "NaCl"]}, {"grade": 6, "subject": "science", "region": "all", "question": "What is a complete path for electricity called?", "answers": ["A circuit", "A battery", "A switch", "A wire"]}, {"grade": 6, "subject": "science", "region": "all", "question": "Which change can NOT be easily reversed?", "answers": ["Burning paper", "Melting ice", "Freezing water", "Dissolving sugar"]}, {"grade": 6, "subject": "science", "region": "all", "question": "Which type of energy is stored in food?", "answers": ["Chemical energy", "Sound energy", "Light energy", "Nuclear energy"]}, {"grade": 6, "subject": "science", "region": "all", "question": "Which layer of the Earth do we live on?", "answers": ["The crust", "The mantle", "The outer core", "The inner core"]}, {"grade": 6, "subject": "science", "region": "all", "question": "What can cause sudden changes to the Earth's surface?", "answers": ["Earthquakes and volcanoes", "Rainbows", "Shadows", "Moonlight"]}, {"grade": 6, "subject": "science", "region": "all", "question": "What is renewable energy?", "answers": ["Energy that won't run out, like wind or solar", "Energy from coal", "Energy from oil", "Energy that is used once"]}, {"grade": 6, "subject": "science", "region": "all", "question": "What does a switch do in a circuit?", "answers": ["Opens or closes the circuit", "Makes more electricity", "Stores electricity", "Changes the colour of light"]}, {"grade": 6, "subject": "science", "region": "all", "question": "Which of these is an insulator of electricity?", "answers": ["Rubber", "Copper", "Aluminium", "Steel"]}, {"grade": 6, "subject": "science", "region": "all", "question": "Why do scientists repeat experiments?", "answers": ["To check the results are reliable", "Because they forgot", "To use more materials", "For fun only"]}, {"grade": 1, "subject": "social", "region": "all", "question": "Who helps us when we are sick?", "answers": ["A doctor", "A pilot", "A baker", "A painter"]}, {"grade": 1, "subject": "social", "region": "all", "question": "Where do we go to borrow books?", "answers": ["A library", "A bakery", "A garage", "A farm"]}, {"grade": 1, "subject": "social", "region": "all", "question": "Which one is a family member?", "answers": ["Grandmother", "Teacher", "Bus driver", "Neighbour"]}, {"grade": 1, "subject": "social", "region": "all", "question": "Who puts out fires?", "answers": ["Firefighters", "Farmers", "Chefs", "Dentists"]}, {"grade": 1, "subject": "social", "region": "AU", "question": "What is a baby kangaroo called?", "answers": ["A joey", "A kitten", "A cub", "A pup"]}, {"grade": 1, "subject": "social", "region": "AU", "question": "What colours are on the Aboriginal flag?", "answers": ["Black, red and yellow", "Blue, white and red", "Green and gold", "Purple and orange"]}, {"grade": 1, "subject": "social", "region": "AU", "question": "Which animal is on Australia's coat of arms with the emu?", "answers": ["Kangaroo", "Koala", "Wombat", "Platypus"]}, {"grade": 1, "subject": "social", "region": "AU", "question": "Which day is Australia's national day?", "answers": ["Australia Day", "Christmas Day", "Easter Monday", "Boxing Day"]}, {"grade": 1, "subject": "social", "region": "NZ", "question": "What is New Zealand's national bird?", "answers": ["The kiwi", "The emu", "The eagle", "The penguin"]}, {"grade": 1, "subject": "social", "region": "NZ", "question": "What does 'kia ora' mean?", "answers": ["Hello", "Goodbye", "Thank you", "Sorry"]}, {"grade": 1, "subject": "social", "region": "NZ", "question": "What is a 'whānau'?", "answers": ["A family", "A food", "A boat", "A song"]}, {"grade": 1, "subject": "social", "region": "NZ", "question": "What does 'kai' mean in te reo Māori?", "answers": ["Food", "Water", "House", "Tree"]}, {"grade": 2, "subject": "social", "region": "all", "question": "What does a map show?", "answers": ["Where places are", "What time it is", "How hot it is", "What to eat"]}, {"grade": 2, "subject": "social", "region": "all", "question": "Which of these is a continent?", "answers": ["Africa", "London", "Pacific", "Amazon"]}, {"grade": 2, "subject": "social", "region": "all", "question": "What do farmers grow?", "answers": ["Food", "Cars", "Phones", "Shops"]}, {"grade": 2, "subject": "social", "region": "all", "question": "Which is a way to care for a place?", "answers": ["Picking up litter", "Breaking things", "Shouting", "Wasting water"]}, {"grade": 2, "subject": "social", "region": "AU", "question": "Who were the first people to live in Australia?", "answers": ["Aboriginal and Torres Strait Islander peoples", "The British", "The Dutch", "The Vikings"]}, {"grade": 2, "subject": "social", "region": "AU", "question": "What is Uluru?", "answers": ["A large rock formation in central Australia", "A river", "A city", "A beach"]}, {"grade": 2, "subject": "social", "region": "AU", "question": "What do we remember on Anzac Day (25 April)?", "answers": ["People who served in wars", "The first day of school", "Christmas", "The first footy match"]}, {"grade": 2, "subject": "social", "region": "AU", "question": "Which ocean is to the east of Australia?", "answers": ["The Pacific Ocean", "The Indian Ocean", "The Arctic Ocean", "The Atlantic Ocean"]}, {"grade": 2, "subject": "social", "region": "NZ", "question": "Who were the first people to settle in New Zealand?", "answers": ["Māori", "The British", "The Dutch", "The French"]}, {"grade": 2, "subject": "social", "region": "NZ", "question": "What is a marae?", "answers": ["A Māori meeting place", "A type of bird", "A mountain", "A shop"]}, {"grade": 2, "subject": "social", "region": "NZ", "question": "What do we remember on Anzac Day (25 April)?", "answers": ["People who served in wars", "The first day of school", "Christmas", "The first rugby match"]}, {"grade": 2, "subject": "social", "region": "NZ", "question": "What is the Māori name for New Zealand?", "answers": ["Aotearoa", "Te Ika", "Waka", "Tāmaki"]}, {"grade": 3, "subject": "social", "region": "all", "question": "How many continents are there?", "answers": ["7", "5", "6", "9"]}, {"grade": 3, "subject": "social", "region": "all", "question": "Which is the largest ocean?", "answers": ["Pacific", "Atlantic", "Indian", "Arctic"]}, {"grade": 3, "subject": "social", "region": "all", "question": "On a map, which direction is usually at the top?", "answers": ["North", "South", "East", "West"]}, {"grade": 3, "subject": "social", "region": "all", "question": "What is a 'citizen'?", "answers": ["A member of a country", "A type of food", "A kind of weather", "A big city"]}, {"grade": 3, "subject": "social", "region": "AU", "question": "What is the capital city of Australia?", "answers": ["Canberra", "Sydney", "Melbourne", "Brisbane"]}, {"grade": 3, "subject": "social", "region": "AU", "question": "How many states does Australia have?", "answers": ["6", "5", "7", "8"]}, {"grade": 3, "subject": "social", "region": "AU", "question": "Which is the largest state of Australia?", "answers": ["Western Australia", "Queensland", "Victoria", "Tasmania"]}, {"grade": 3, "subject": "social", "region": "AU", "question": "What is the Acknowledgement of Country?", "answers": ["Showing respect to the Traditional Owners of the land", "A school sports day", "A type of map", "A song about the beach"]}, {"grade": 3, "subject": "social", "region": "NZ", "question": "What is the capital city of New Zealand?", "answers": ["Wellington", "Auckland", "Christchurch", "Dunedin"]}, {"grade": 3, "subject": "social", "region": "NZ", "question": "What are New Zealand's two main islands called?", "answers": ["North Island and South Island", "East Island and West Island", "Big Island and Small Island", "Kiwi Island and Fern Island"]}, {"grade": 3, "subject": "social", "region": "NZ", "question": "What is a waka?", "answers": ["A Māori canoe", "A house", "A bird", "A cloak"]}, {"grade": 3, "subject": "social", "region": "NZ", "question": "What is the largest city in New Zealand?", "answers": ["Auckland", "Wellington", "Hamilton", "Nelson"]}, {"grade": 4, "subject": "social", "region": "all", "question": "What is the capital city of France?", "answers": ["Paris", "Rome", "Madrid", "Berlin"]}, {"grade": 4, "subject": "social", "region": "all", "question": "Which is the longest river in Africa?", "answers": ["The Nile", "The Amazon", "The Thames", "The Danube"]}, {"grade": 4, "subject": "social", "region": "all", "question": "Which tool shows north, south, east and west?", "answers": ["A compass", "A ruler", "A clock", "A thermometer"]}, {"grade": 4, "subject": "social", "region": "all", "question": "What is the 'environment'?", "answers": ["The natural world around us", "A type of shop", "A school subject only", "A computer game"]}, {"grade": 4, "subject": "social", "region": "AU", "question": "Which explorer mapped the east coast of Australia in 1770?", "answers": ["James Cook", "Christopher Columbus", "Abel Tasman", "Marco Polo"]}, {"grade": 4, "subject": "social", "region": "AU", "question": "When did the First Fleet arrive in Sydney Cove?", "answers": ["1788", "1901", "1066", "1999"]}, {"grade": 4, "subject": "social", "region": "AU", "question": "What is the longest river system in Australia?", "answers": ["The Murray–Darling", "The Yarra", "The Swan", "The Nile"]}, {"grade": 4, "subject": "social", "region": "AU", "question": "Which reef off Queensland is the world's largest coral reef system?", "answers": ["The Great Barrier Reef", "Ningaloo Reef", "The Coral Sea", "Rottnest Reef"]}, {"grade": 4, "subject": "social", "region": "NZ", "question": "Which Dutch explorer was the first European to reach New Zealand in 1642?", "answers": ["Abel Tasman", "James Cook", "Christopher Columbus", "Ferdinand Magellan"]}, {"grade": 4, "subject": "social", "region": "NZ", "question": "Which is New Zealand's highest mountain?", "answers": ["Aoraki / Mount Cook", "Mount Taranaki", "Mount Ruapehu", "Mount Everest"]}, {"grade": 4, "subject": "social", "region": "NZ", "question": "What is a pōwhiri?", "answers": ["A Māori welcome ceremony", "A type of dance contest", "A fishing net", "A weather pattern"]}, {"grade": 4, "subject": "social", "region": "NZ", "question": "Which sea lies between New Zealand and Australia?", "answers": ["The Tasman Sea", "The Coral Sea", "The Red Sea", "The Black Sea"]}, {"grade": 5, "subject": "social", "region": "all", "question": "What is the capital city of Japan?", "answers": ["Tokyo", "Beijing", "Seoul", "Bangkok"]}, {"grade": 5, "subject": "social", "region": "all", "question": "Which line divides the Earth into north and south halves?", "answers": ["The equator", "The prime meridian", "The tropic", "A border"]}, {"grade": 5, "subject": "social", "region": "all", "question": "What does 'democracy' mean?", "answers": ["People choose their leaders", "One person decides everything", "There are no rules", "Only kings vote"]}, {"grade": 5, "subject": "social", "region": "all", "question": "What is a 'colony'?", "answers": ["A place ruled by another country", "A type of crop", "A big ocean", "A sports team"]}, {"grade": 5, "subject": "social", "region": "AU", "question": "In what year did the Australian colonies join to become one nation (Federation)?", "answers": ["1901", "1788", "1945", "1850"]}, {"grade": 5, "subject": "social", "region": "AU", "question": "What was the Eureka Stockade (1854)?", "answers": ["A rebellion by gold miners in Ballarat", "A sporting event", "A famous ship", "A bushfire"]}, {"grade": 5, "subject": "social", "region": "AU", "question": "Which climate zone covers much of central Australia?", "answers": ["Desert", "Rainforest", "Polar", "Alpine"]}, {"grade": 5, "subject": "social", "region": "AU", "question": "What happened during the gold rushes of the 1850s?", "answers": ["Many people came to Australia to find gold", "Australia became a colony", "The Olympics were held", "Railways were invented"]}, {"grade": 5, "subject": "social", "region": "NZ", "question": "In what year was the Treaty of Waitangi / Te Tiriti o Waitangi first signed?", "answers": ["1840", "1901", "1769", "1950"]}, {"grade": 5, "subject": "social", "region": "NZ", "question": "Which day marks the signing of the Treaty of Waitangi?", "answers": ["Waitangi Day (6 February)", "Anzac Day", "Matariki", "Labour Day"]}, {"grade": 5, "subject": "social", "region": "NZ", "question": "What is Matariki?", "answers": ["The Māori New Year, marked by a star cluster", "A mountain", "A lake", "A type of fish"]}, {"grade": 5, "subject": "social", "region": "NZ", "question": "In 1893 New Zealand became the first country where…", "answers": ["Women could vote in national elections", "Cars were invented", "Rugby was played", "The internet started"]}, {"grade": 6, "subject": "social", "region": "all", "question": "Which organisation brings countries together to keep peace?", "answers": ["The United Nations", "The Olympics", "FIFA", "The Red Cross"]}, {"grade": 6, "subject": "social", "region": "all", "question": "Which is the largest continent by area?", "answers": ["Asia", "Africa", "Europe", "Antarctica"]}, {"grade": 6, "subject": "social", "region": "all", "question": "What does 'export' mean?", "answers": ["Selling goods to another country", "Buying from another country", "Making laws", "Building roads"]}, {"grade": 6, "subject": "social", "region": "all", "question": "What are 'human rights'?", "answers": ["Basic rights every person should have", "Rules for one sport", "Rights only for adults", "Laws about animals"]}, {"grade": 6, "subject": "social", "region": "AU", "question": "What are the three levels of government in Australia?", "answers": ["Federal, state and local", "North, south and east", "Big, medium and small", "Police, army and navy"]}, {"grade": 6, "subject": "social", "region": "AU", "question": "Who is the head of the Australian Government?", "answers": ["The Prime Minister", "The Mayor", "The Premier", "The Governor"]}, {"grade": 6, "subject": "social", "region": "AU", "question": "What is the name of Australia's parliament building city?", "answers": ["Canberra", "Hobart", "Darwin", "Adelaide"]}, {"grade": 6, "subject": "social", "region": "AU", "question": "What does a referendum ask Australians to vote on?", "answers": ["Changing the Constitution", "Who wins the footy", "School holidays", "A new flag colour only"]}, {"grade": 6, "subject": "social", "region": "NZ", "question": "What is New Zealand's parliament building in Wellington often called?", "answers": ["The Beehive", "The Castle", "The Tower", "The Dome"]}, {"grade": 6, "subject": "social", "region": "NZ", "question": "Who is the head of the New Zealand Government?", "answers": ["The Prime Minister", "The Mayor", "The Premier", "The Governor"]}, {"grade": 6, "subject": "social", "region": "NZ", "question": "What is MMP in New Zealand?", "answers": ["The voting system for electing Parliament", "A rugby team", "A school test", "A type of money"]}, {"grade": 6, "subject": "social", "region": "NZ", "question": "Which are New Zealand's three official languages?", "answers": ["English, te reo Māori and NZ Sign Language", "English, French and Māori", "English, Spanish and Māori", "Only English"]}]};
+const TUTORIALS = [{"grade": 1, "subject": "maths", "title": "Adding and taking away up to 20", "cards": [{"heading": "Adding means putting together", "text": "When we add, we count on to find how many altogether.", "example": "6 + 3: start at 6, count on 7, 8, 9. The answer is 9."}, {"heading": "Taking away means finding what's left", "text": "When we subtract, we count back.", "example": "9 − 4: start at 9, count back 8, 7, 6, 5. The answer is 5."}, {"heading": "Tip: use your fingers or a number line", "text": "Start with the bigger number, then count the smaller one.", "example": "3 + 8 is the same as 8 + 3 = 11."}]}, {"grade": 2, "subject": "maths", "title": "Bigger sums and groups of", "cards": [{"heading": "Adding tens and ones", "text": "Add the tens, then add the ones.", "example": "34 + 25: 30 + 20 = 50, 4 + 5 = 9, so 59."}, {"heading": "Subtracting two-digit numbers", "text": "Take away the tens, then the ones.", "example": "68 − 23: 68 − 20 = 48, 48 − 3 = 45."}, {"heading": "Multiplying is equal groups", "text": "3 × 4 means 3 groups of 4.", "example": "4 + 4 + 4 = 12, so 3 × 4 = 12."}]}, {"grade": 3, "subject": "maths", "title": "Times tables and sharing", "cards": [{"heading": "Times tables", "text": "Learn the 2, 3, 4, 5 and 10 times tables by skip counting.", "example": "5 × 6: 5, 10, 15, 20, 25, 30. The answer is 30."}, {"heading": "Division is sharing equally", "text": "20 ÷ 4 asks: how many in each group if 20 is shared into 4 groups?", "example": "4 × 5 = 20, so 20 ÷ 4 = 5."}, {"heading": "Tip: multiplying and dividing are a family", "text": "If you know one fact, you know three more.", "example": "3 × 7 = 21, 7 × 3 = 21, 21 ÷ 3 = 7, 21 ÷ 7 = 3."}]}, {"grade": 4, "subject": "maths", "title": "Big numbers and all the tables", "cards": [{"heading": "Adding three-digit numbers", "text": "Line up hundreds, tens and ones, then add each column. Carry when a column makes 10 or more.", "example": "356 + 127 = 483."}, {"heading": "Multiplying a two-digit number", "text": "Split the number into tens and ones, multiply each, then add.", "example": "23 × 4 = (20 × 4) + (3 × 4) = 80 + 12 = 92."}, {"heading": "Dividing", "text": "Think: what times the small number makes the big one?", "example": "72 ÷ 8: 8 × 9 = 72, so the answer is 9."}]}, {"grade": 5, "subject": "maths", "title": "Fractions, decimals and bigger multiplying", "cards": [{"heading": "A fraction of a number", "text": "Divide by the bottom number, then multiply by the top number.", "example": "3/4 of 20: 20 ÷ 4 = 5, 5 × 3 = 15."}, {"heading": "Adding decimals", "text": "Line up the decimal points, then add like whole numbers.", "example": "2.4 + 3.7 = 6.1"}, {"heading": "Multiplying two-digit numbers", "text": "Split one number into tens and ones.", "example": "14 × 12 = (14 × 10) + (14 × 2) = 140 + 28 = 168."}]}, {"grade": 6, "subject": "maths", "title": "Percentages and negative numbers", "cards": [{"heading": "Percent means out of 100", "text": "10% is one tenth, 25% is one quarter, 50% is one half.", "example": "25% of 80 = 80 ÷ 4 = 20."}, {"heading": "Negative numbers", "text": "Numbers below zero are negative. Subtracting a bigger number takes you below zero.", "example": "5 − 8 = −3 (count back 8 from 5)."}, {"heading": "Order of operations", "text": "Multiply and divide before you add and subtract.", "example": "4 + 3 × 2 = 4 + 6 = 10, not 14."}]}, {"grade": 1, "subject": "english", "title": "Letters, sounds and sentences", "cards": [{"heading": "Letters make sounds", "text": "Every word is made of letter sounds. Say each sound, then blend them.", "example": "c-a-t makes 'cat'."}, {"heading": "Rhyming words", "text": "Words that rhyme end with the same sound.", "example": "cat, hat, mat, sat."}, {"heading": "Sentences", "text": "A sentence starts with a capital letter and ends with a full stop.", "example": "The dog is big."}]}, {"grade": 2, "subject": "english", "title": "Plurals, opposites and nouns", "cards": [{"heading": "More than one", "text": "Add 's' to most words. Add 'es' after s, x, sh or ch.", "example": "cat → cats, box → boxes."}, {"heading": "Opposites", "text": "Opposites mean completely different things.", "example": "big ↔ small, hot ↔ cold."}, {"heading": "Nouns are naming words", "text": "A noun names a person, place, animal or thing.", "example": "Mum, park, dog, table."}]}, {"grade": 3, "subject": "english", "title": "Verbs, adjectives and tricky plurals", "cards": [{"heading": "Verbs are doing words", "text": "A verb tells what someone does.", "example": "jump, swim, read."}, {"heading": "Past tense", "text": "Most verbs add 'ed', but some change completely.", "example": "walk → walked, but run → ran, go → went."}, {"heading": "Adjectives describe", "text": "An adjective tells more about a noun.", "example": "a soft, fluffy cat."}]}, {"grade": 4, "subject": "english", "title": "Adverbs, homophones and apostrophes", "cards": [{"heading": "Adverbs", "text": "An adverb tells how something is done. Many end in 'ly'.", "example": "She sang quietly."}, {"heading": "Homophones", "text": "Words that sound the same but mean different things.", "example": "sea / see, there / their / they're."}, {"heading": "Apostrophes show ownership", "text": "Add 's to show something belongs to someone.", "example": "Mia's hat = the hat that belongs to Mia."}]}, {"grade": 5, "subject": "english", "title": "Synonyms, pronouns and figurative language", "cards": [{"heading": "Synonyms", "text": "Words that mean nearly the same. Use them to make writing interesting.", "example": "big → enormous, huge, large."}, {"heading": "Pronouns", "text": "Pronouns replace nouns so we don't repeat them.", "example": "Sam is tall. He plays basketball."}, {"heading": "Personification", "text": "Giving human actions to things that aren't human.", "example": "The wind whispered through the trees."}]}, {"grade": 6, "subject": "english", "title": "Similes, metaphors and the passive voice", "cards": [{"heading": "Similes compare using 'like' or 'as'", "text": "", "example": "as brave as a lion, ran like the wind."}, {"heading": "Metaphors say something IS something else", "text": "", "example": "The classroom was a zoo."}, {"heading": "Active and passive voice", "text": "Active: the doer comes first. Passive: the action happens to something.", "example": "Sam ate the cake. → The cake was eaten by Sam."}]}, {"grade": 1, "subject": "health", "title": "Keeping my body healthy", "cards": [{"heading": "Eat healthy food", "text": "Fruit and vegetables give you energy to play and learn.", "example": "Choose an apple instead of lollies."}, {"heading": "Keep clean", "text": "Wash your hands with soap before eating and after the toilet.", "example": "Sing 'Happy Birthday' twice while you wash."}, {"heading": "Stay safe", "text": "Before crossing the road: stop, look and listen. Wear a hat in the sun.", "example": "Hold a grown-up's hand near roads."}]}, {"grade": 2, "subject": "health", "title": "Safe in the sun, safe in the water", "cards": [{"heading": "Slip, Slop, Slap, Seek, Slide", "text": "Slip on a shirt, slop on sunscreen, slap on a hat, seek shade, slide on sunglasses.", "example": "Sunscreen goes on 20 minutes before going out."}, {"heading": "Swim between the flags", "text": "At the beach, swim between the red and yellow flags where lifesavers watch.", "example": "If you get into trouble, raise your arm and wave."}, {"heading": "Feelings", "text": "Everyone feels sad or angry sometimes. Talk to someone you trust.", "example": "Tell a parent, teacher or friend."}]}, {"grade": 3, "subject": "health", "title": "Teeth, sleep and staying safe", "cards": [{"heading": "Healthy teeth", "text": "Brush for about two minutes, twice a day. Soft drinks have lots of sugar.", "example": "Water is the best drink for teeth."}, {"heading": "Sleep", "text": "Kids need 9 to 12 hours of sleep each night to grow and learn.", "example": "Put screens away before bed."}, {"heading": "Emergencies", "text": "In Australia call 000. In New Zealand call 111.", "example": "Tell them your name, where you are and what happened."}]}, {"grade": 4, "subject": "health", "title": "Healthy choices and kind friends", "cards": [{"heading": "Five serves of veg", "text": "Try to eat at least five serves of vegetables and fruit every day.", "example": "Add carrot sticks to your lunchbox."}, {"heading": "Bullying", "text": "Bullying is hurting someone again and again on purpose.", "example": "If you see it, tell a teacher or a trusted adult."}, {"heading": "Food labels", "text": "The nutrition panel shows how much sugar, salt and fat a food has.", "example": "Compare two cereals and pick the lower sugar one."}]}, {"grade": 5, "subject": "health", "title": "Growing up and staying safe online", "cards": [{"heading": "Your body", "text": "Your lungs breathe, your heart pumps blood, and sunlight helps your body make vitamin D.", "example": "Being active for 60 minutes a day keeps your body strong."}, {"heading": "Peer pressure and consent", "text": "You can say no if friends push you to do something that feels wrong. Consent means giving permission.", "example": "'No thanks, I don't want to.'"}, {"heading": "Online safety", "text": "Keep passwords and personal details private.", "example": "Never share your address or school online."}]}, {"grade": 6, "subject": "health", "title": "Mind, body and first aid", "cards": [{"heading": "Mental health", "text": "Talking about feelings, exercise and good sleep help you manage stress.", "example": "Take a walk or talk to someone when you feel worried."}, {"heading": "Your immune system", "text": "White blood cells fight germs. Fibre, water and good food keep you well.", "example": "Wholegrain bread is high in fibre."}, {"heading": "First aid", "text": "First aid is help given before a doctor arrives.", "example": "DRSABCD: Danger, Response, Send for help, Airway, Breathing, CPR, Defibrillator."}]}, {"grade": 1, "subject": "science", "title": "Living things and the world around us", "cards": [{"heading": "Animals", "text": "Animals move, eat and grow. Some fly, some swim, some walk.", "example": "A joey grows in its mother's pouch."}, {"heading": "Plants", "text": "Plants need water, sunlight and air to grow.", "example": "A seed grows into a plant."}, {"heading": "Materials", "text": "Things are made of materials like glass, wood and metal.", "example": "Glass is see-through, so we use it for windows."}]}, {"grade": 2, "subject": "science", "title": "Life cycles, pushes and pulls", "cards": [{"heading": "Life cycles", "text": "Living things change as they grow.", "example": "egg → caterpillar → chrysalis → butterfly."}, {"heading": "Pushes and pulls", "text": "A push or pull can make something move, stop or change shape.", "example": "Kicking a ball is a push."}, {"heading": "Float or sink", "text": "Light things like corks float. Heavy, solid things like rocks sink.", "example": "A coin sinks; a leaf floats."}]}, {"grade": 3, "subject": "science", "title": "States of matter and our Earth", "cards": [{"heading": "Solid, liquid, gas", "text": "Matter can be a solid (ice), a liquid (water) or a gas (steam).", "example": "Heating ice makes water; heating water makes steam."}, {"heading": "Day and night", "text": "The Earth spins around once every 24 hours. When your side faces the Sun, it's day.", "example": "When it's day in Australia, it's night in England."}, {"heading": "Fair tests", "text": "Change only one thing at a time so you know what caused the result.", "example": "Same plants, same soil, but different amounts of water."}]}, {"grade": 4, "subject": "science", "title": "Forces, food chains and the land", "cards": [{"heading": "Friction", "text": "Friction is a force that slows things down when surfaces rub.", "example": "Rough carpet slows a toy car more than smooth tiles."}, {"heading": "Food chains", "text": "Energy passes from plants to animals that eat them.", "example": "grass → rabbit → fox"}, {"heading": "Erosion", "text": "Wind and water slowly wear away rock and soil.", "example": "Waves shape cliffs along the coast."}]}, {"grade": 5, "subject": "science", "title": "Space, light and plants", "cards": [{"heading": "Our solar system", "text": "Earth goes around the Sun once a year (about 365 days). Jupiter is the biggest planet.", "example": "The Moon reflects the Sun's light."}, {"heading": "Photosynthesis", "text": "Plants use sunlight, water and carbon dioxide to make food and oxygen.", "example": "That's why leaves face the Sun."}, {"heading": "Light travels in straight lines", "text": "When light is blocked, it makes a shadow.", "example": "Your shadow is longer in the late afternoon."}]}, {"grade": 6, "subject": "science", "title": "Electricity and changes", "cards": [{"heading": "Circuits", "text": "Electricity needs a complete loop called a circuit. A switch opens or closes it.", "example": "Battery → wire → globe → wire → back to battery."}, {"heading": "Conductors and insulators", "text": "Metals like copper let electricity flow. Rubber and plastic stop it.", "example": "Wires are copper inside, plastic outside."}, {"heading": "Reversible and irreversible changes", "text": "Melting ice can be undone; burning paper can't.", "example": "Cooking an egg is irreversible."}]}, {"grade": 1, "subject": "social", "title": "People and places around me", "cards": [{"heading": "Helpers in our community", "text": "Doctors, firefighters, teachers and librarians help us every day.", "example": "Firefighters put out fires."}, {"heading": "Family", "text": "Our family might include parents, grandparents, brothers, sisters and cousins.", "example": "In te reo Māori, family is 'whānau'."}, {"heading": "Special symbols", "text": "Countries have special animals and days.", "example": "Australia: the kangaroo. New Zealand: the kiwi."}]}, {"grade": 2, "subject": "social", "title": "First peoples and special places", "cards": [{"heading": "First peoples", "text": "Aboriginal and Torres Strait Islander peoples were the first people of Australia. Māori were the first people to settle Aotearoa New Zealand.", "example": "'Aotearoa' is the Māori name for New Zealand."}, {"heading": "Maps", "text": "A map shows where places are, from above.", "example": "Find your school on a map of your town."}, {"heading": "Remembering", "text": "On Anzac Day (25 April) Australia and New Zealand remember people who served in wars.", "example": "Many people go to a dawn service."}]}, {"grade": 3, "subject": "social", "title": "Our country and the world", "cards": [{"heading": "Continents and oceans", "text": "There are 7 continents and 5 oceans. The Pacific is the biggest ocean.", "example": "Australia is both a country and a continent."}, {"heading": "Capital cities", "text": "Australia's capital is Canberra. New Zealand's capital is Wellington.", "example": "Australia has 6 states; New Zealand has two main islands."}, {"heading": "Compass directions", "text": "North is usually at the top of a map.", "example": "Never Eat Soggy Weet-Bix: North, East, South, West."}]}, {"grade": 4, "subject": "social", "title": "Explorers and the environment", "cards": [{"heading": "Explorers", "text": "Abel Tasman reached New Zealand in 1642. James Cook mapped Australia's east coast in 1770.", "example": "The First Fleet arrived in Sydney Cove in 1788."}, {"heading": "Natural wonders", "text": "The Great Barrier Reef and Aoraki / Mount Cook are special natural places.", "example": "Aoraki is New Zealand's highest mountain."}, {"heading": "Caring for the environment", "text": "People can protect places by reducing waste and looking after land and water.", "example": "Pick up litter at the beach."}]}, {"grade": 5, "subject": "social", "title": "How our nations began", "cards": [{"heading": "Colonies", "text": "A colony is a place ruled by another country. Australia and New Zealand were British colonies.", "example": "The six Australian colonies joined in 1901 (Federation)."}, {"heading": "Treaty of Waitangi", "text": "Te Tiriti o Waitangi was first signed in 1840 by Māori chiefs and the British Crown.", "example": "Waitangi Day is on 6 February."}, {"heading": "Democracy", "text": "In a democracy people vote to choose their leaders.", "example": "In 1893 New Zealand women were the first in the world to vote in national elections."}]}, {"grade": 6, "subject": "social", "title": "Government and rights", "cards": [{"heading": "How we're governed", "text": "Both countries have a Parliament and a Prime Minister. Australia has federal, state and local government.", "example": "New Zealand's Parliament building is called the Beehive."}, {"heading": "Voting", "text": "New Zealand uses MMP to elect Parliament. Australians vote in referendums to change the Constitution.", "example": "Voting is compulsory in Australia from age 18."}, {"heading": "Human rights and the world", "text": "Human rights are rights every person should have. The United Nations helps countries keep peace.", "example": "Everyone has the right to an education."}]}];
+const DEFAULT_CONFIG = {"regions": {"AU": {"name": "Australia", "currency": "AUD", "curriculum": "Australian Curriculum v9", "yearOffset": 0}, "NZ": {"name": "New Zealand", "currency": "NZD", "curriculum": "New Zealand Curriculum", "yearOffset": 1}}, "questionsPerGame": 5, "playCreditsPerGame": 1, "rewardCreditsPerCorrectAnswer": 1, "perfectGameBonus": 2, "starterPlayCredits": 3, "recentQuestionMemory": 60, "creditPacks": [{"id": "pack_small", "credits": 10, "price": 1.49}, {"id": "pack_medium", "credits": 50, "price": 5.99}, {"id": "pack_large", "credits": 120, "price": 11.99}]};
+
+// ---------- state ----------
+const STORE_KEY = 'credit-quiz-web-v1';
+const freshState = () => ({ config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)), region: 'AU', parent: null, kids: [], purchases: [] });
+function sampleState() {
+  const d = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  return {
+    config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
+    region: 'AU',
+    kids: [
+      { id: 'k1', name: 'Aino', face: '🦊', grade: 2, play: 6, earned: 9, recent: [],
+        stats: { maths: [11, 15], english: [8, 10], social: [3, 5], health: [4, 5], science: [2, 5] },
+        games: [ { date: d(0), subject: 'maths', score: 4, of: 5, earned: 4 }, { date: d(1), subject: 'english', score: 5, of: 5, earned: 7 }, { date: d(3), subject: 'science', score: 2, of: 5, earned: 2 } ] },
+      { id: 'k2', name: 'Leo', face: '🐢', grade: 5, play: 1, earned: 14, recent: [],
+        stats: { maths: [17, 20], english: [6, 10], social: [7, 10], health: [9, 10], science: [3, 5] },
+        games: [ { date: d(0), subject: 'mix', score: 3, of: 5, earned: 3 }, { date: d(2), subject: 'maths', score: 5, of: 5, earned: 7 }, { date: d(2), subject: 'health', score: 4, of: 5, earned: 4 } ] },
+    ],
+    purchases: [ { date: d(4), kid: 'Aino', credits: 10, price: 1.49 }, { date: d(6), kid: 'Leo', credits: 10, price: 1.49 } ],
+  };
+}
+let S;
+try { S = JSON.parse(localStorage.getItem(STORE_KEY)) || freshState(); } catch { S = freshState(); }
+const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch {} };
+const C = () => S.config;
+const REG = () => C().regions[S.region];
+const yearOf = (grade) => `Year ${grade + REG().yearOffset}`;
+
+// ---------- question generator ----------
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const SUBJ = Object.fromEntries(BANK.subjects.map(s => [s.id, s]));
+
+// Wrong number answers near the right one, all different.
+function numAnswers(right, spread, fmt = String, allowNeg = false) {
+  const set = new Set([fmt(right)]);
+  let guard = 0;
+  while (set.size < 4 && guard++ < 200) {
+    let w = right + (Math.random() < .5 ? -1 : 1) * rnd(1, spread);
+    if (!allowNeg && w < 0) continue;
+    set.add(fmt(w));
+  }
+  return [...set];
+}
+const q = (subject, text, answers) => ({ subject, question: text, answers });
+
+const MATHS = {
+  1: () => { if (Math.random() < .5) { const a = rnd(1, 10), b = rnd(1, 10); return q('maths', `What is ${a} + ${b}?`, numAnswers(a + b, 3)); }
+             const a = rnd(5, 20), b = rnd(1, a); return q('maths', `What is ${a} − ${b}?`, numAnswers(a - b, 3)); },
+  2: () => { const t = rnd(0, 2);
+             if (t === 0) { const a = rnd(10, 60), b = rnd(5, 39); return q('maths', `What is ${a} + ${b}?`, numAnswers(a + b, 10)); }
+             if (t === 1) { const a = rnd(30, 99), b = rnd(5, a - 5); return q('maths', `What is ${a} − ${b}?`, numAnswers(a - b, 10)); }
+             const a = rnd(2, 5), b = rnd(2, 5); return q('maths', `What is ${a} × ${b}?`, numAnswers(a * b, 4)); },
+  3: () => { const a = pick([2, 3, 4, 5, 10]), b = rnd(1, 10);   // Year 3 facts: 2, 3, 4, 5 and 10 times tables
+             if (Math.random() < .6) return q('maths', `What is ${a} × ${b}?`, numAnswers(a * b, a));
+             return q('maths', `What is ${a * b} ÷ ${a}?`, numAnswers(b, 3)); },
+  4: () => { const t = rnd(0, 2);
+             if (t === 0) { const a = rnd(120, 800), b = rnd(50, 199); return q('maths', `What is ${a} + ${b}?`, numAnswers(a + b, 20)); }
+             if (t === 1) { const a = rnd(12, 99), b = rnd(3, 9); return q('maths', `What is ${a} × ${b}?`, numAnswers(a * b, 15)); }
+             const b = rnd(3, 9), r = rnd(12, 60); return q('maths', `What is ${b * r} ÷ ${b}?`, numAnswers(r, 6)); },
+  5: () => { const t = rnd(0, 2);
+             if (t === 0) { const a = rnd(12, 40), b = rnd(11, 25); return q('maths', `What is ${a} × ${b}?`, numAnswers(a * b, 30)); }
+             if (t === 1) { const [n, d] = pick([[1, 2], [1, 3], [1, 4], [3, 4], [1, 5], [2, 5]]); const x = d * rnd(3, 15);
+                            return q('maths', `What is ${n}/${d} of ${x}?`, numAnswers(x / d * n, 5)); }
+             const a = rnd(11, 89), b = rnd(11, 89); const f = (v) => (v / 10).toFixed(1);
+             return q('maths', `What is ${f(a)} + ${f(b)}?`, numAnswers(a + b, 12, f)); },
+  6: () => { const t = rnd(0, 2);
+             if (t === 0) { const p = pick([10, 20, 25, 50, 75]); const x = pick([40, 80, 120, 200, 240, 360, 400]);
+                            return q('maths', `What is ${p}% of ${x}?`, numAnswers(x * p / 100, 20)); }
+             if (t === 1) { const a = rnd(2, 20), b = rnd(2, 9), c = rnd(2, 9);
+                            const right = a + b * c, set = new Set([String(right), String((a + b) * c)]);
+                            for (const w of numAnswers(right, 6)) if (set.size < 4) set.add(w);
+                            return q('maths', `What is ${a} + ${b} × ${c}?`, [...set]); }
+             const a = rnd(2, 15), b = rnd(a + 2, 30); return q('maths', `What is ${a} − ${b}?`, numAnswers(a - b, 5, String, true)); },
+};
+
+const W = {
+  plural: [['cat','cats'],['box','boxes'],['baby','babies'],['bus','buses'],['dog','dogs'],['fox','foxes'],['party','parties'],['dish','dishes']],
+  pluralHard: [['child','children'],['foot','feet'],['tooth','teeth'],['man','men'],['leaf','leaves'],['mouse','mice'],['knife','knives'],['sheep','sheep']],
+  opposite: [['hot','cold'],['up','down'],['happy','sad'],['fast','slow'],['open','closed'],['full','empty'],['light','dark'],['early','late'],['loud','quiet'],['wet','dry'],['hard','soft'],['strong','weak'],['tall','short'],['first','last']],
+  past: [['go','went'],['see','saw'],['eat','ate'],['swim','swam'],['take','took'],['write','wrote'],['buy','bought'],['think','thought'],['teach','taught'],['catch','caught'],['bring','brought'],['sing','sang'],['drink','drank'],['fly','flew'],['give','gave']],
+  synonym: [['big','large'],['small','tiny'],['quick','fast'],['angry','furious'],['smart','clever'],['begin','start'],['end','finish'],['scared','afraid'],['shout','yell'],['brave','courageous'],['hard','difficult'],['look','glance'],['happy','cheerful']],
+};
+function wordQ(text, right, wrongs) {
+  const set = [right, ...shuffle(wrongs.filter(w => w !== right)).filter((w, i, s) => s.indexOf(w) === i).slice(0, 3)];
+  return set.length === 4 ? q('english', text, set) : null;
+}
+const ENGLISH = {
+  plural: (list) => { const [w, p] = pick(list); return wordQ(`What is the plural of '${w}'?`, p, [w + 's', w + 'es', w.replace(/y$/, '') + 'ies', w + 'en', w]); },
+  opposite: () => { const [a, b] = pick(W.opposite); const others = W.opposite.flat().filter(x => x !== a && x !== b); return wordQ(`What is the opposite of '${a}'?`, b, shuffle(others)); },
+  past: () => { const [v, p] = pick(W.past); return wordQ(`What is the past tense of '${v}'?`, p, [v + 'ed', v + 's', v + 'ing', p + 'ed']); },
+  synonym: () => { const [a, b] = pick(W.synonym); const others = W.synonym.flat().filter(x => x !== a && x !== b); return wordQ(`Which word means the same as '${a}'?`, b, shuffle(others)); },
+};
+function genEnglish(grade) {
+  const opts = grade <= 2 ? [() => ENGLISH.plural(W.plural), ENGLISH.opposite]
+    : grade <= 4 ? [() => ENGLISH.plural(W.pluralHard), ENGLISH.opposite, ENGLISH.past]
+    : [ENGLISH.past, ENGLISH.synonym, () => ENGLISH.plural(W.pluralHard)];
+  return pick(opts)();
+}
+
+// Builds one game: fresh maths every time, generated English mixed in, and bank questions the child hasn't seen lately.
+function buildGame(kid, subject) {
+  const n = C().questionsPerGame, used = new Set(), recent = new Set(kid.recent), out = [];
+  const subjects = subject === 'mix' ? BANK.subjects.map(s => s.id) : [subject];
+  let guard = 0;
+  while (out.length < n && guard++ < 400) {
+    const s = pick(subjects);
+    let item = null;
+    if (s === 'maths') item = MATHS[kid.grade]();
+    else if (s === 'english' && Math.random() < .5) item = genEnglish(kid.grade);
+    if (!item) {
+      const pool = BANK.questions.filter(x => x.subject === s && (x.region === 'all' || x.region === S.region) && (x.grade === kid.grade || x.grade === kid.grade - 1));
+      const fresh = pool.filter(x => !recent.has(x.question) && !used.has(x.question));
+      const from = fresh.length ? fresh : pool.filter(x => !used.has(x.question));
+      if (!from.length) continue;
+      // prefer the child's own grade over the review grade
+      const own = from.filter(x => x.grade === kid.grade);
+      item = pick(own.length && Math.random() < .75 ? own : from);
+    }
+    if (!item || used.has(item.question)) continue;
+    used.add(item.question);
+    out.push({ ...item, right: item.answers[0], shown: shuffle(item.answers) });
+  }
+  kid.recent = [...kid.recent, ...used].slice(-C().recentQuestionMemory);
+  return out;
+}
+
+// ---------- parent PIN ----------
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64 = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+const randBytes = (n) => crypto.getRandomValues(new Uint8Array(n));
+async function hashPin(pin, salt) {
+  const data = new TextEncoder().encode(salt + ':' + pin);
+  return b64(await crypto.subtle.digest('SHA-256', data));
+}
+async function setPin(pin) { const salt = b64(randBytes(16)); S.parent = { salt, hash: await hashPin(pin, salt) }; save(); }
+async function checkPin(pin) { return !!S.parent && (await hashPin(pin, S.parent.salt)) === S.parent.hash; }
+const pinOk = (p) => /^\d{4,8}$/.test(p);
+let parentUnlocked = false;
+
+// ---------- fingerprint login (passkeys) ----------
+// The browser asks the device to check a fingerprint (or face) and only tells the game "yes" or "no".
+// No fingerprint is ever seen or saved by the game.
+let passkeyReady = false;
+async function detectPasskeys() {
+  try { passkeyReady = !!window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+  catch { passkeyReady = false; }
+}
+async function enrollKid(kid) {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: randBytes(32),
+    rp: { name: 'Credit Quiz' },
+    user: { id: randBytes(16), name: `credit-quiz-${kid.name.toLowerCase()}`, displayName: `${kid.name} (Credit Quiz)` },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+    timeout: 60000, attestation: 'none' } });
+  kid.cred = b64(cred.rawId); save();
+}
+async function verifyKid(kid) {
+  const res = await navigator.credentials.get({ publicKey: {
+    challenge: randBytes(32), allowCredentials: [{ type: 'public-key', id: unb64(kid.cred) }],
+    userVerification: 'required', timeout: 60000 } });
+  return !!res && b64(res.rawId) === kid.cred;
+}
+
+// ---------- rendering ----------
+const view = document.getElementById('view');
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const money = (v) => new Intl.NumberFormat(undefined, { style: 'currency', currency: REG().currency }).format(v);
+const pct = ([r, t]) => t ? Math.round(r / t * 100) : 0;
+const wallet = (k) => `<div class="wallet"><span class="chip play" title="Play credits bought by a parent">🎟 ${k.play} play</span><span class="chip earn" title="Credits earned for right answers">★ ${k.earned} earned</span></div>`;
+let tab = 'kid', game = null;
+
+function setTab(t) {
+  tab = t;
+  document.getElementById('tabKid').setAttribute('aria-selected', t === 'kid');
+  document.getElementById('tabParent').setAttribute('aria-selected', t === 'parent');
+  game = null;
+  if (t === 'kid') { parentUnlocked = false; kidHome(); } else if (parentUnlocked) parentDash(); else parentLock();
+}
+document.getElementById('tabKid').onclick = () => setTab('kid');
+document.getElementById('tabParent').onclick = () => setTab('parent');
+
+function kidHome() {
+  if (!S.kids.length) {
+    view.innerHTML = `<section class="sheet"><h2 style="font-size:1.8rem">No players yet</h2>
+      <p class="muted">A parent needs to add the children first.</p><button class="btn" id="goParent">Open the parent dashboard</button></section>`;
+    document.getElementById('goParent').onclick = () => setTab('parent');
+    return;
+  }
+  view.innerHTML = `<section class="sheet">
+    <h2 style="font-size:1.8rem">Who is playing?</h2>
+    <p class="muted" style="margin:4px 0 0">Tap your name, then touch the fingerprint sensor.</p>
+    <div class="kids">${S.kids.map(k => `<button class="kidcard" data-kid="${k.id}">
+        <span class="face">${k.face}</span><span class="name">${esc(k.name)}</span>
+        <span><span class="chip grade">${yearOf(k.grade)}</span></span>${wallet(k)}</button>`).join('')}</div></section>`;
+  view.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => fingerprint(S.kids.find(k => k.id === b.dataset.kid)));
+}
+
+function fingerprint(kid) {
+  const canFinger = passkeyReady && kid.cred;
+  view.innerHTML = `<section class="sheet"><div class="finger">
+    <h2 style="font-size:1.8rem">Hi ${esc(kid.name)}! ${kid.face}</h2>
+    ${canFinger
+      ? `<button class="pad" id="pad" aria-label="Tap, then touch the fingerprint sensor">👆</button>
+         <p class="muted" id="fpMsg">Tap the circle, then touch the fingerprint sensor.</p>`
+      : `<p class="muted" id="fpMsg">${passkeyReady ? 'Your fingerprint isn\'t set up yet.' : 'This device or browser can\'t check fingerprints.'}<br>A parent can type the PIN to let you in.</p>`}
+    <div class="row" style="justify-content:center"><button class="btn ghost" id="askParent">A parent will type the PIN</button><button class="btn ghost" id="back">Not me</button></div>
+    <div id="pinBox"></div></div></section>`;
+  document.getElementById('back').onclick = kidHome;
+  document.getElementById('askParent').onclick = () => pinForm(document.getElementById('pinBox'), 'Parent PIN', () => pickSubject(kid));
+  const pad = document.getElementById('pad');
+  if (pad) pad.onclick = async () => {
+    const msg = document.getElementById('fpMsg');
+    pad.classList.add('scan'); pad.disabled = true; msg.textContent = 'Touch the sensor now…';
+    try { if (await verifyKid(kid)) return pickSubject(kid); msg.textContent = 'That didn\'t work. Try again.'; }
+    catch (e) { msg.textContent = 'That didn\'t work. Tap the circle to try again.'; }
+    pad.classList.remove('scan'); pad.disabled = false;
+  };
+}
+
+// A small PIN form that calls onOk when the parent PIN is right.
+function pinForm(el, label, onOk) {
+  el.innerHTML = `<form class="pin" style="margin-inline:auto">
+    <label class="f" for="pinIn">${label}<input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+    <button class="btn">Unlock</button><div id="pinErr" aria-live="polite"></div></form>`;
+  const input = el.querySelector('#pinIn'); input.focus();
+  el.querySelector('form').onsubmit = async (e) => {
+    e.preventDefault();
+    if (await checkPin(input.value)) onOk();
+    else { el.querySelector('#pinErr').innerHTML = '<div class="err">Wrong PIN.</div>'; input.value = ''; input.focus(); }
+  };
+}
+
+function parentLock() {
+  view.innerHTML = `<section class="sheet"><h2 style="font-size:1.8rem">Parent dashboard</h2>
+    <p class="muted">Type your parent PIN to open it.</p><div id="lockBox"></div></section>`;
+  pinForm(document.getElementById('lockBox'), 'Parent PIN', () => { parentUnlocked = true; parentDash(); });
+}
+
+// First visit on this device: the parent makes a PIN and picks the curriculum.
+function setup() {
+  document.querySelector('.tabs').hidden = true;
+  view.innerHTML = `<section class="sheet"><h2 style="font-size:1.9rem">Welcome to Credit Quiz</h2>
+    <p class="muted" style="max-width:60ch">A parent sets this up once. Make a parent PIN (4 to 8 digits). Children can't open the parent dashboard without it.</p>
+    <form class="pin" id="setupForm">
+      <label class="f" for="p1">New parent PIN<input id="p1" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" required></label>
+      <label class="f" for="p2">Type it again<input id="p2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" required></label>
+      <label class="f" for="reg">Curriculum<select id="reg">${Object.entries(C().regions).map(([id, r]) => `<option value="${id}">${r.name} (${r.curriculum})</option>`).join('')}</select></label>
+      <label style="display:flex;gap:8px;align-items:center;font-size:.92rem"><input type="checkbox" id="demo"> Add two example children to try it out</label>
+      <button class="btn">Save and continue</button><div id="setupErr" aria-live="polite"></div>
+    </form></section>`;
+  document.getElementById('setupForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const a = document.getElementById('p1').value, b = document.getElementById('p2').value, err = document.getElementById('setupErr');
+    if (!pinOk(a)) { err.innerHTML = '<div class="err">The PIN needs 4 to 8 digits.</div>'; return; }
+    if (a !== b) { err.innerHTML = '<div class="err">The two PINs are different.</div>'; return; }
+    if (document.getElementById('demo').checked) { const d = sampleState(); S.kids = d.kids; S.purchases = d.purchases; }
+    S.region = document.getElementById('reg').value;
+    await setPin(a);
+    document.querySelector('.tabs').hidden = false;
+    parentUnlocked = true; setTab('parent');
+  };
+}
+
+async function boot() {
+  await detectPasskeys();
+  if (!S.parent) setup(); else kidHome();
+}
+
+function pickSubject(kid, note = '') {
+  const cost = C().playCreditsPerGame, broke = kid.play < cost;
+  view.innerHTML = `<section class="sheet">
+    <div class="qhead"><div><div class="eyebrow">${yearOf(kid.grade)} · ${REG().name}</div><h2 style="font-size:1.8rem">What do you want to play, ${esc(kid.name)}?</h2></div>${wallet(kid)}</div>
+    <div class="subjects">${BANK.subjects.map(s => `<button class="subj" data-s="${s.id}" ${broke ? 'disabled' : ''}><span class="ico">${s.emoji}</span>${s.name}</button>`).join('')}
+      <button class="subj" data-s="mix" ${broke ? 'disabled' : ''}><span class="ico">🎲</span>Mix of everything</button></div>
+    <div class="costline">${broke
+      ? `<b>You're out of play credits.</b> Ask a parent to add more in the parent dashboard.`
+      : `One game is <b>${C().questionsPerGame} questions</b> and costs <b>${cost} play credit${cost === 1 ? '' : 's'}</b>. Every right answer earns <b>★ ${C().rewardCreditsPerCorrectAnswer}</b>${C().perfectGameBonus ? `, and all right earns <b>★ ${C().perfectGameBonus} bonus</b>` : ''}.`}</div>
+    ${note ? `<p class="muted">${note}</p>` : ''}
+    <div class="row" style="margin-top:14px"><button class="btn ghost" id="done">Finish playing</button></div></section>`;
+  document.getElementById('done').onclick = kidHome;
+  view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => b.dataset.s === 'mix' ? startGame(kid, 'mix') : tutorial(kid, b.dataset.s, 0));
+}
+
+// Short lesson on the topics in this game. It's free: credits are only used when the game starts.
+function tutorial(kid, subject, i) {
+  const t = TUTORIALS.find(x => x.grade === kid.grade && x.subject === subject), s = SUBJ[subject], card = t.cards[i], last = i === t.cards.length - 1;
+  const cost = C().playCreditsPerGame;
+  view.innerHTML = `<section class="sheet">
+    <div class="qhead"><span class="eyebrow">${s.emoji} ${s.name} · ${yearOf(kid.grade)} · Quick lesson</span>
+      <span class="dots">${t.cards.map((_, j) => `<i class="${j < i ? 'ok' : j === i ? 'now' : ''}"></i>`).join('')}</span></div>
+    <h2 class="lesson-title">${esc(t.title)}</h2>
+    <div class="lesson">
+      <h3>${esc(card.heading)}</h3>
+      ${card.text ? `<p>${esc(card.text)}</p>` : ''}
+      ${card.example ? `<div class="example"><span class="eyebrow">Example</span><p>${esc(card.example)}</p></div>` : ''}
+    </div>
+    <div class="row" style="margin-top:16px">
+      ${i > 0 ? `<button class="btn ghost" id="prev">Back</button>` : ''}
+      ${last ? `<button class="btn" id="go">I'm ready! Start the game (🎟 ${cost})</button>` : `<button class="btn" id="nextCard">Next</button>`}
+      ${last ? '' : `<button class="btn ghost" id="skip">Skip to the game</button>`}
+    </div></section>`;
+  if (i > 0) document.getElementById('prev').onclick = () => tutorial(kid, subject, i - 1);
+  if (last) document.getElementById('go').onclick = () => startGame(kid, subject);
+  else { document.getElementById('nextCard').onclick = () => tutorial(kid, subject, i + 1); document.getElementById('skip').onclick = () => startGame(kid, subject); }
+}
+
+function startGame(kid, subject) {
+  kid.play -= C().playCreditsPerGame;
+  game = { kid, subject, qs: buildGame(kid, subject), i: 0, results: [] };
+  save(); showQuestion();
+}
+
+function showQuestion() {
+  const { kid, qs, i, results } = game, item = qs[i], s = SUBJ[item.subject];
+  view.innerHTML = `<section class="sheet">
+    <div class="qhead"><span class="eyebrow">${s.emoji} ${s.name} · Question ${i + 1} of ${qs.length}</span>
+      <span class="dots">${qs.map((_, j) => `<i class="${j < i ? (results[j] ? 'ok' : 'no') : j === i ? 'now' : ''}"></i>`).join('')}</span></div>
+    <p class="question">${esc(item.question)}</p>
+    <div class="answers">${item.shown.map((a, j) => `<button class="ans" data-a="${j}">${esc(a)}</button>`).join('')}</div>
+    <div class="feedback" id="fb" aria-live="polite"></div>
+    <div class="row"><span class="chip earn">★ ${results.filter(Boolean).length * C().rewardCreditsPerCorrectAnswer} this game</span></div></section>`;
+  view.querySelectorAll('.ans').forEach(b => b.onclick = () => answer(+b.dataset.a));
+}
+
+function answer(j) {
+  const item = game.qs[game.i], ok = item.shown[j] === item.right, kid = game.kid;
+  game.results.push(ok);
+  const st = kid.stats[item.subject] || (kid.stats[item.subject] = [0, 0]); st[1]++; if (ok) st[0]++;
+  if (ok) kid.earned += C().rewardCreditsPerCorrectAnswer;
+  view.querySelectorAll('.ans').forEach((b, k) => { b.disabled = true; if (item.shown[k] === item.right) b.classList.add('right'); else if (k === j) b.classList.add('wrong'); });
+  const fb = document.getElementById('fb');
+  fb.className = 'feedback ' + (ok ? 'ok' : 'no');
+  fb.innerHTML = ok ? `Right! +★ ${C().rewardCreditsPerCorrectAnswer}` : `Not quite. The answer is <b>${esc(item.right)}</b>.`;
+  const last = game.i === game.qs.length - 1;
+  fb.insertAdjacentHTML('afterend', `<div class="row" style="margin-top:6px"><button class="btn" id="next">${last ? 'See my score' : 'Next question'}</button></div>`);
+  const next = document.getElementById('next'); next.focus();
+  next.onclick = () => { if (last) finish(); else { game.i++; showQuestion(); } };
+  save();
+}
+
+function finish() {
+  const { kid, results, subject } = game, score = results.filter(Boolean).length, of = results.length;
+  const perfect = score === of && C().perfectGameBonus > 0;
+  if (perfect) kid.earned += C().perfectGameBonus;
+  const earned = score * C().rewardCreditsPerCorrectAnswer + (perfect ? C().perfectGameBonus : 0);
+  kid.games.unshift({ date: new Date().toISOString().slice(0, 10), subject, score, of, earned });
+  save();
+  view.innerHTML = `<section class="sheet"><div class="result">
+    <div class="eyebrow">${subject === 'mix' ? '🎲 Mix' : SUBJ[subject].emoji + ' ' + SUBJ[subject].name}</div>
+    <div class="big num">${score} / ${of}</div>
+    <h2 style="font-size:1.6rem">${score === of ? 'Perfect game! 🎉' : score >= of / 2 ? 'Great work!' : 'Good try, keep going!'}</h2>
+    <div class="coins" aria-label="${earned} credits earned">${'⭐'.repeat(Math.min(earned, 20)) || '·'}</div>
+    <p>You earned <b>★ ${earned}</b>${perfect ? ` (including a ★ ${C().perfectGameBonus} perfect bonus)` : ''}. You now have <b>★ ${kid.earned}</b>.</p>
+    ${wallet(kid)}
+    <div class="row" style="justify-content:center"><button class="btn" id="again">Play again</button><button class="btn ghost" id="done">Finish playing</button></div>
+  </div></section>`;
+  document.getElementById('again').onclick = () => pickSubject(kid, 'New questions every game.');
+  document.getElementById('done').onclick = kidHome;
+}
+
+// ---------- parent dashboard ----------
+let buy = { pack: null, kid: null, msg: '' };
+function parentDash() {
+  const cfg = C();
+  const kidPanels = S.kids.map(k => {
+    const played = k.games.length, tot = Object.values(k.stats).reduce((a, s) => [a[0] + s[0], a[1] + s[1]], [0, 0]);
+    return `<section class="panel">
+      <div class="qhead"><h2>${k.face} ${esc(k.name)}</h2>
+        <label class="f" style="grid-auto-flow:column;align-items:center;gap:8px">School year
+          <select data-grade="${k.id}" style="width:auto">${[1,2,3,4,5,6].map(g => `<option value="${g}" ${g === k.grade ? 'selected' : ''}>${yearOf(g)}</option>`).join('')}</select></label></div>
+      <div class="stats">
+        <div class="stat"><b style="color:var(--accent)">${k.play}</b><span>Play credits left</span></div>
+        <div class="stat"><b style="color:var(--crayon-ink)">★ ${k.earned}</b><span>Earned credits</span></div>
+        <div class="stat"><b>${pct(tot)}%</b><span>Right answers</span></div></div>
+      ${k.play < cfg.playCreditsPerGame ? `<div class="toast" style="background:var(--bad-soft);color:var(--bad)">${esc(k.name)} is out of play credits.</div>` : ''}
+      <div><div class="eyebrow" style="margin-bottom:6px">By subject</div><div class="bars">${BANK.subjects.map(s => {
+        const st = k.stats[s.id] || [0, 0], p = pct(st);
+        return `<div class="bar"><span>${s.emoji} ${s.name}</span><span class="track"><span class="fill ${st[1] ? (p < 50 ? 'lo' : p < 75 ? 'mid' : 'hi') : ''}" style="width:${p}%"></span></span><span class="num muted" style="text-align:right">${st[1] ? p + '%' : '–'}</span></div>`; }).join('')}</div></div>
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Subject</th><th class="num">Score</th><th class="num">Earned</th></tr></thead><tbody>
+        ${k.games.slice(0, 5).map(g => `<tr><td class="num">${g.date}</td><td>${g.subject === 'mix' ? '🎲 Mix' : SUBJ[g.subject].name}</td><td class="num">${g.score}/${g.of}</td><td class="num">★ ${g.earned}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">No games yet.</td></tr>`}
+      </tbody></table></div>
+      <div class="row"><span class="muted" style="font-size:.85rem;flex:1;min-width:160px">${played} games played. Pay out earned credits when you give ${esc(k.name)} their reward.</span>
+        <button class="btn ghost" data-payout="${k.id}" ${k.earned ? '' : 'disabled'}>Mark ★ ${k.earned} as paid out</button></div>
+      <div class="row" style="border-top:1px solid var(--line);padding-top:12px">
+        ${k.cred ? `<span class="ok-chip">✓ Fingerprint set up</span>` : `<span class="muted" style="font-size:.88rem">No fingerprint yet</span>`}
+        ${passkeyReady ? `<button class="btn ghost" data-enroll="${k.id}">${k.cred ? 'Set up again' : 'Set up fingerprint'}</button>` : ''}
+        <button class="btn ghost" data-remove="${k.id}" style="margin-left:auto">Remove</button></div>
+      <div data-kidmsg="${k.id}"></div>
+    </section>`; }).join('');
+  const FACES = ['🦊','🐢','🐼','🦁','🐸','🐙','🦄','🐯','🐨','🐧','🦖','🐝'];
+  const addPanel = `<section class="panel"><h2>Add a child</h2>
+    <label class="f" for="newName">Name<input id="newName" type="text" maxlength="20" autocomplete="off"></label>
+    <div class="f">Picture<div class="faces">${FACES.map((f, i) => `<button type="button" data-face="${f}" aria-pressed="${i === 0}">${f}</button>`).join('')}</div></div>
+    <label class="f" for="newGrade">School year<select id="newGrade">${[1,2,3,4,5,6].map(g => `<option value="${g}">${yearOf(g)} (age ${g + 5}–${g + 6})</option>`).join('')}</select></label>
+    <button class="btn" id="addKid">Add child</button><div id="addErr" aria-live="polite"></div>
+    <p class="muted" style="margin:0;font-size:.85rem">${passkeyReady
+      ? 'After adding, tap “Set up fingerprint” with the child next to you. The device will ask for a fingerprint. Any finger saved in this device’s settings will work, so on a shared device save only the children’s fingers.'
+      : 'This device or browser can’t check fingerprints, so children will need the parent PIN to start. Fingerprint login works in Chrome on Android, and Safari or Chrome on a Mac with Touch ID.'}</p>
+  </section>`;
+
+  const pack = cfg.creditPacks.find(p => p.id === buy.pack);
+  view.innerHTML = `
+  <div class="grid">${kidPanels}${addPanel}</div>
+  <div class="grid" style="margin-top:16px">
+    <section class="panel">
+      <h2>Buy play credits</h2>
+      <p class="muted" style="margin:0;font-size:.9rem">Pretend purchase for now: no money is charged. Real payments come later.</p>
+      <div class="packs">${cfg.creditPacks.map(p => `<button class="pack" data-pack="${p.id}" aria-pressed="${buy.pack === p.id}"><b class="num">🎟 ${p.credits}</b><span class="num">${money(p.price)}</span><span class="muted" style="font-size:.78rem">${Math.floor(p.credits / Math.max(1, cfg.playCreditsPerGame))} games</span></button>`).join('')}</div>
+      <label class="f" for="buyKid">For
+        <select id="buyKid" ${S.kids.length ? '' : 'disabled'}>${S.kids.map(k => `<option value="${k.id}" ${buy.kid === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>
+      ${pack ? `<div class="confirm"><span>Buy <b>${pack.credits} play credits</b> for <b>${esc((S.kids.find(k => k.id === (buy.kid || S.kids[0].id)) || {}).name)}</b> for <b>${money(pack.price)}</b>?</span>
+        <div class="row"><button class="btn" id="confirmBuy">Confirm purchase</button><button class="btn ghost" id="cancelBuy">Cancel</button></div></div>` : `<p class="muted" style="margin:0;font-size:.9rem">Pick a pack to continue.</p>`}
+      ${buy.msg ? `<div class="toast" role="status">${buy.msg}</div>` : ''}
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Child</th><th class="num">Credits</th><th class="num">Paid</th></tr></thead><tbody>
+        ${S.purchases.slice(0, 6).map(p => `<tr><td class="num">${p.date}</td><td>${esc(p.kid)}</td><td class="num">${p.credits}</td><td class="num">${money(p.price)}</td></tr>`).join('')}</tbody></table></div>
+    </section>
+    <section class="panel">
+      <h2>Settings</h2>
+      <label class="f" for="region">Curriculum
+        <select id="region">${Object.entries(cfg.regions).map(([id, r]) => `<option value="${id}" ${id === S.region ? 'selected' : ''}>${r.name} (${r.curriculum})</option>`).join('')}</select></label>
+      <p class="muted" style="margin:0;font-size:.9rem">Placeholder values. Change them and play a game to feel the difference.</p>
+      <div class="cfg">
+        ${[['questionsPerGame', 'Questions per game', 3, 20], ['playCreditsPerGame', 'Play credits per game', 0, 20], ['rewardCreditsPerCorrectAnswer', '★ per right answer', 0, 20], ['perfectGameBonus', '★ bonus for all right', 0, 50]]
+          .map(([k, l, mn, mx]) => `<label class="f" for="cfg_${k}">${l}<input type="number" id="cfg_${k}" data-cfg="${k}" min="${mn}" max="${mx}" value="${cfg[k]}"></label>`).join('')}
+      </div>
+      <div class="eyebrow">Credit packs (${REG().currency})</div>
+      <div class="cfg">${cfg.creditPacks.map((p, i) => `<label class="f" for="pk_c${i}">Pack ${i + 1} credits<input type="number" id="pk_c${i}" data-pack-credits="${i}" min="1" value="${p.credits}"></label>
+        <label class="f" for="pk_p${i}">Pack ${i + 1} price<input type="number" id="pk_p${i}" data-pack-price="${i}" min="0" step="0.01" value="${p.price}"></label>`).join('')}</div>
+      <div class="eyebrow">Parent PIN</div>
+      <form class="row" id="pinChange"><input id="newPin" type="password" inputmode="numeric" maxlength="8" placeholder="New PIN" autocomplete="new-password" style="flex:1;min-width:120px"><button class="btn ghost">Change PIN</button></form>
+      <div id="pinMsg" aria-live="polite"></div>
+      <div class="row"><button class="btn ghost" id="lock">Lock dashboard</button><button class="btn ghost" id="reset">Erase everything on this device</button></div>
+      <div id="resetBox"></div>
+    </section>
+  </div>`;
+
+  view.querySelectorAll('[data-grade]').forEach(s => s.onchange = () => { S.kids.find(k => k.id === s.dataset.grade).grade = +s.value; save(); });
+  view.querySelectorAll('[data-enroll]').forEach(b => b.onclick = async () => {
+    const kid = S.kids.find(k => k.id === b.dataset.enroll), msg = view.querySelector(`[data-kidmsg="${kid.id}"]`);
+    msg.innerHTML = `<p class="muted" style="margin:0">Ask ${esc(kid.name)} to touch the fingerprint sensor when the device asks.</p>`;
+    try { await enrollKid(kid); parentDash(); }
+    catch (e) { msg.innerHTML = `<div class="err">Fingerprint setup didn't finish. Try again.</div>`; }
+  });
+  view.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
+    const kid = S.kids.find(k => k.id === b.dataset.remove), msg = view.querySelector(`[data-kidmsg="${kid.id}"]`);
+    msg.innerHTML = `<div class="confirm"><span>Remove <b>${esc(kid.name)}</b> and all their credits and scores?</span>
+      <div class="row"><button class="btn" id="yesRemove">Remove</button><button class="btn ghost" id="noRemove">Cancel</button></div></div>`;
+    msg.querySelector('#noRemove').onclick = () => { msg.innerHTML = ''; };
+    msg.querySelector('#yesRemove').onclick = () => { S.kids = S.kids.filter(k => k !== kid); save(); parentDash(); };
+  });
+  let face = '🦊';
+  view.querySelectorAll('[data-face]').forEach(b => b.onclick = () => { face = b.dataset.face; view.querySelectorAll('[data-face]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  document.getElementById('addKid').onclick = () => {
+    const name = document.getElementById('newName').value.trim();
+    if (!name) { document.getElementById('addErr').innerHTML = '<div class="err">Type the child\'s name.</div>'; return; }
+    S.kids.push({ id: 'k' + b64(randBytes(6)), name, face, grade: +document.getElementById('newGrade').value, play: C().starterPlayCredits, earned: 0, recent: [], stats: {}, games: [], cred: null });
+    save(); parentDash();
+  };
+  view.querySelectorAll('[data-payout]').forEach(b => b.onclick = () => { S.kids.find(k => k.id === b.dataset.payout).earned = 0; save(); parentDash(); });
+  view.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => { if (!S.kids.length) { buy.msg = 'Add a child first.'; return parentDash(); } buy.pack = b.dataset.pack; buy.kid = document.getElementById('buyKid').value; buy.msg = ''; parentDash(); });
+  document.getElementById('buyKid').onchange = (e) => { buy.kid = e.target.value; if (buy.pack) parentDash(); };
+  if (pack) {
+    document.getElementById('cancelBuy').onclick = () => { buy.pack = null; parentDash(); };
+    document.getElementById('confirmBuy').onclick = () => {
+      const kid = S.kids.find(k => k.id === (buy.kid || S.kids[0].id));
+      kid.play += pack.credits;
+      S.purchases.unshift({ date: new Date().toISOString().slice(0, 10), kid: kid.name, credits: pack.credits, price: pack.price });
+      buy = { pack: null, kid: kid.id, msg: `Added ${pack.credits} play credits for ${esc(kid.name)}.` };
+      save(); parentDash();
+    };
+  }
+  view.querySelectorAll('[data-cfg]').forEach(i => i.onchange = () => { const v = Math.max(+i.min, Math.min(+i.max, Math.round(+i.value || 0))); cfg[i.dataset.cfg] = v; save(); parentDash(); });
+  view.querySelectorAll('[data-pack-credits]').forEach(i => i.onchange = () => { cfg.creditPacks[+i.dataset.packCredits].credits = Math.max(1, Math.round(+i.value || 1)); save(); parentDash(); });
+  view.querySelectorAll('[data-pack-price]').forEach(i => i.onchange = () => { cfg.creditPacks[+i.dataset.packPrice].price = Math.max(0, +i.value || 0); save(); parentDash(); });
+  document.getElementById('region').onchange = (e) => { S.region = e.target.value; S.kids.forEach(k => k.recent = []); save(); parentDash(); };
+  document.getElementById('pinChange').onsubmit = async (e) => {
+    e.preventDefault(); const p = document.getElementById('newPin').value, m = document.getElementById('pinMsg');
+    if (!pinOk(p)) { m.innerHTML = '<div class="err">The PIN needs 4 to 8 digits.</div>'; return; }
+    await setPin(p); document.getElementById('newPin').value = ''; m.innerHTML = '<div class="toast">PIN changed.</div>';
+  };
+  document.getElementById('lock').onclick = () => setTab('kid');
+  document.getElementById('reset').onclick = () => {
+    const box = document.getElementById('resetBox');
+    box.innerHTML = `<div class="confirm"><span>Erase all children, credits, scores and the PIN on this device? This can't be undone.</span>
+      <div class="row"><button class="btn" id="yesReset">Erase everything</button><button class="btn ghost" id="noReset">Cancel</button></div></div>`;
+    box.querySelector('#noReset').onclick = () => { box.innerHTML = ''; };
+    box.querySelector('#yesReset').onclick = () => { S = freshState(); buy = { pack: null, kid: null, msg: '' }; parentUnlocked = false; save(); setup(); };
+  };
+}
+
+boot();
+</script>
+</body>
+</html>
