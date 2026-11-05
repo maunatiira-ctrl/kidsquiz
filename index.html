@@ -467,7 +467,8 @@ function setTab(t) {
   if (game && game.listen) { game.listen.active = false; try { game.listen.rec.abort(); } catch {} }
   closePop(); game = null;
   const open = t === 'host' ? hostPage : parentDash;
-  if (t === 'kid') { parentUnlocked = false; kidHome(); } else if (parentUnlocked) open(); else parentLock(open);
+  // The parent dashboard opens without a PIN (Mesta, 2026-11-05). The host page still asks for it.
+  if (t === 'kid') { parentUnlocked = false; kidHome(); } else if (t === 'parent' || parentUnlocked) open(); else parentLock(open);
 }
 document.getElementById('tabKid').onclick = () => setTab('kid');
 document.getElementById('tabParent').onclick = () => setTab('parent');
@@ -1205,7 +1206,7 @@ function parentDash() {
       <div class="eyebrow">Parent PIN</div>
       <form class="row" id="pinChange"><input id="newPin" type="password" inputmode="numeric" maxlength="8" placeholder="New PIN" autocomplete="new-password" style="flex:1;min-width:120px"><button class="btn ghost">Change PIN</button></form>
       <div id="pinMsg" aria-live="polite"></div>
-      <div class="row"><button class="btn ghost" id="lock">Lock dashboard</button><button class="btn ghost" id="reset">Erase everything on this device</button></div>
+      <div class="row"><button class="btn ghost" id="lock">Back to the kids' game</button><button class="btn ghost" id="reset">Erase everything on this device</button></div>
       <div id="resetBox"></div>
     </section>
   </div>`;
