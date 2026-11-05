@@ -7,38 +7,40 @@
 <meta name="description" content="A quiz game for kids aged 6 to 11, following the Australian and New Zealand curriculum.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%AD%90%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-/* Layout: exercise-book page. A ruled paper ground, one wide column; the kid's game is big-button and centred on the card, the parent side is a scannable grid. */
+/* Layout: school-crest look. A maroon header band on a clean white page; white cards with fine borders; gold only for earned stars. */
 :root {
-  --paper: #f6f8fc;
-  --rule: #dfe6f3;
+  --paper: #faf7f7;
+  --rule: #f1e9ea;
   --card: #ffffff;
-  --ink: #1d2a44;
-  --muted: #5d6a85;
-  --line: #d3dbea;
-  --accent: #2f5bd3;      /* school-ink blue */
-  --accent-soft: #e4ebfc;
-  --crayon: #f2b630;      /* gold for earned credits */
+  --ink: #2a1a1d;
+  --muted: #6e5a5e;
+  --line: #e7dadc;
+  --accent: #7b1e2e;      /* maroon */
+  --accent-soft: #f7e9eb;
+  --brand: #7b1e2e;       /* header band */
+  --brand-ink: #ffffff;
+  --crayon: #d9a426;      /* gold for earned credits */
   --crayon-ink: #6b4a00;
-  --good: #1e8a54; --good-soft: #def3e7;
-  --bad: #c43d3d; --bad-soft: #fbe3e3;
-  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --good: #1e7a4c; --good-soft: #def1e6;
+  --bad: #b3261e; --bad-soft: #fbe4e2;
+  --display: "Lexend", "Segoe UI", system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --paper: #121826; --rule: #1b2336; --card: #1a2235; --ink: #e8edf8; --muted: #9aa6c0; --line: #2c3650;
-  --accent: #7f9ef5; --accent-soft: #24304f; --crayon: #f5c451; --crayon-ink: #f5c451;
-  --good: #5dd398; --good-soft: #17352a; --bad: #f08a8a; --bad-soft: #3a1f24; color-scheme: dark; } }
+  --paper: #161012; --rule: #1f1719; --card: #1f1619; --ink: #f4eaec; --muted: #b9a5a9; --line: #3a2a2e;
+  --accent: #e8a3ad; --accent-soft: #3a1f25; --brand: #5c1522; --brand-ink: #ffffff; --crayon: #f0c25a; --crayon-ink: #f0c25a;
+  --good: #6fd3a0; --good-soft: #17352a; --bad: #f19a92; --bad-soft: #3d1f1d; color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --paper: #121826; --rule: #1b2336; --card: #1a2235; --ink: #e8edf8; --muted: #9aa6c0; --line: #2c3650;
-  --accent: #7f9ef5; --accent-soft: #24304f; --crayon: #f5c451; --crayon-ink: #f5c451;
-  --good: #5dd398; --good-soft: #17352a; --bad: #f08a8a; --bad-soft: #3a1f24; color-scheme: dark; }
+  --paper: #161012; --rule: #1f1719; --card: #1f1619; --ink: #f4eaec; --muted: #b9a5a9; --line: #3a2a2e;
+  --accent: #e8a3ad; --accent-soft: #3a1f25; --brand: #5c1522; --brand-ink: #ffffff; --crayon: #f0c25a; --crayon-ink: #f0c25a;
+  --good: #6fd3a0; --good-soft: #17352a; --bad: #f19a92; --bad-soft: #3d1f1d; color-scheme: dark; }
 
 * { box-sizing: border-box; }
 body {
   font-family: var(--body); font-size: 16px; line-height: 1.5; color: var(--ink);
-  background: var(--paper) repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px);
+  background: var(--paper);
 }
 .wrap { max-width: 980px; margin: 0 auto; padding-block: 20px 48px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -49,11 +51,16 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 header.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .brand { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
 .brand h1 { white-space: nowrap; }
-.brand h1 { font-size: 2rem; font-weight: 800; color: var(--accent); }
-.brand span { color: var(--muted); font-size: .9rem; }
-.tabs { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
-.tabs button { border: 0; background: none; padding: 8px 16px; border-radius: 999px; font-weight: 700; color: var(--muted); }
-.tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+.brand h1 { font-size: 1.75rem; font-weight: 700; color: var(--brand-ink); letter-spacing: -.01em; }
+.brand span { color: color-mix(in srgb, var(--brand-ink) 78%, transparent); font-size: .9rem; }
+header.top { background: var(--brand); color: var(--brand-ink); border-radius: 18px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 6px 20px -12px rgba(60, 10, 20, .6); }
+.tabs { display: inline-flex; flex-wrap: wrap; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; padding: 4px; }
+.tabs button { border: 0; background: none; padding: 8px 16px; border-radius: 999px; font-weight: 700; color: var(--brand-ink); opacity: .85; }
+.tabs button[aria-selected="true"] { background: #ffffff; color: #7b1e2e; opacity: 1; }
+.tabs button:focus-visible { outline-color: #ffffff; }
+.gender { display: flex; gap: 8px; flex-wrap: wrap; }
+.gender button { flex: 1; min-width: 110px; padding: 10px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); font-weight: 700; }
+.gender button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .sample { font-size: .85rem; color: var(--muted); margin: 0 0 18px; }
 .sample b { color: var(--ink); }
 
@@ -168,7 +175,7 @@ input[type=email], input[type=number], input[type=tel] { font: inherit; padding:
 .err-text { color: var(--bad); font-weight: 700; }
 .reqs { display: grid; gap: 10px; }
 .req { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
-.hostalert { display: block; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--crayon); color: #1d2a44; font-weight: 700; text-decoration: none; }
+.hostalert { display: block; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--crayon); color: #2a1a1d; font-weight: 700; text-decoration: none; }
 .notice { padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .pin input[type=password] { font-size: 1.6rem; letter-spacing: .4em; text-align: center; }
 .err { padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-weight: 700; }
@@ -243,10 +250,10 @@ function sampleState() {
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     region: 'AU',
     kids: [
-      { id: 'k1', name: 'Aino', face: '🦊', grade: 2, play: 6, earned: 9, recent: [],
+      { id: 'k1', name: 'Aino', face: '👧', gender: 'girl', grade: 2, play: 6, earned: 9, recent: [],
         stats: { maths: [11, 15], english: [8, 10], social: [3, 5], health: [4, 5], science: [2, 5] },
         games: [ { date: d(0), subject: 'maths', score: 4, of: 5, earned: 4 }, { date: d(1), subject: 'english', score: 5, of: 5, earned: 7 }, { date: d(3), subject: 'science', score: 2, of: 5, earned: 2 } ] },
-      { id: 'k2', name: 'Leo', face: '🐢', grade: 5, play: 1, earned: 14, recent: [],
+      { id: 'k2', name: 'Leo', face: '👦🏽', gender: 'boy', grade: 5, play: 1, earned: 14, recent: [],
         stats: { maths: [17, 20], english: [6, 10], social: [7, 10], health: [9, 10], science: [3, 5] },
         games: [ { date: d(0), subject: 'mix', score: 3, of: 5, earned: 3 }, { date: d(2), subject: 'maths', score: 5, of: 5, earned: 7 }, { date: d(2), subject: 'health', score: 4, of: 5, earned: 4 } ] },
     ],
@@ -1016,6 +1023,11 @@ function tryWord(t, btn, out) {
 }
 
 // ---------- parent dashboard ----------
+const AVATARS = {
+  girl: ['👧', '👧🏻', '👧🏽', '👧🏾', '👧🏿', '👸', '🦸‍♀️', '🧚‍♀️', '🧜‍♀️', '👩‍🎓', '👩‍🚀', '👩‍🔬'],
+  boy: ['👦', '👦🏻', '👦🏽', '👦🏾', '👦🏿', '🤴', '🦸‍♂️', '🧙‍♂️', '🧜‍♂️', '👨‍🎓', '👨‍🚀', '👨‍🔬'],
+};
+const newKid = { name: '', gender: 'girl', face: AVATARS.girl[0] };
 const packButton = (p) => `<button class="pack" data-pack="${p.id}" aria-pressed="${buy.pack === p.id}"><b class="num">🎟 ${p.credits}</b><span class="num">${money(packPrice(p))}</span><span class="muted" style="font-size:.78rem">${Math.floor(p.credits / Math.max(1, C().playCreditsPerGame))} games</span></button>`;
 
 // Online top-ups. The parent registers once (email + password, remembered on this device),
@@ -1171,10 +1183,12 @@ function parentDash() {
         <button class="btn ghost" data-remove="${k.id}" style="margin-left:auto">Remove</button></div>
       <div data-kidmsg="${k.id}"></div>
     </section>`; }).join('');
-  const FACES = ['🦊','🐢','🐼','🦁','🐸','🐙','🦄','🐯','🐨','🐧','🦖','🐝'];
+  const FACES = AVATARS[newKid.gender];
+  if (!FACES.includes(newKid.face)) newKid.face = FACES[0];
   const addPanel = `<section class="panel"><h2>Add a child</h2>
-    <label class="f" for="newName">Name<input id="newName" type="text" maxlength="20" autocomplete="off"></label>
-    <div class="f">Picture<div class="faces">${FACES.map((f, i) => `<button type="button" data-face="${f}" aria-pressed="${i === 0}">${f}</button>`).join('')}</div></div>
+    <label class="f" for="newName">Name<input id="newName" type="text" maxlength="20" autocomplete="off" value="${esc(newKid.name)}"></label>
+    <div class="f">Gender<div class="gender">${[['girl', '👧 Girl'], ['boy', '👦 Boy']].map(([g, l]) => `<button type="button" data-gender="${g}" aria-pressed="${newKid.gender === g}">${l}</button>`).join('')}</div></div>
+    <div class="f">Avatar<div class="faces">${FACES.map(f => `<button type="button" data-face="${f}" aria-pressed="${f === newKid.face}">${f}</button>`).join('')}</div></div>
     <label class="f" for="newGrade">School year<select id="newGrade">${[1,2,3,4,5,6].map(g => `<option value="${g}">${yearOf(g)} (age ${g + 5}–${g + 6})</option>`).join('')}</select></label>
     <button class="btn" id="addKid">Add child</button><div id="addErr" aria-live="polite"></div>
     <p class="muted" style="margin:0;font-size:.85rem">${passkeyReady
@@ -1230,13 +1244,13 @@ function parentDash() {
     msg.querySelector('#noRemove').onclick = () => { msg.innerHTML = ''; };
     msg.querySelector('#yesRemove').onclick = () => { S.kids = S.kids.filter(k => k !== kid); save(); parentDash(); };
   });
-  let face = '🦊';
-  view.querySelectorAll('[data-face]').forEach(b => b.onclick = () => { face = b.dataset.face; view.querySelectorAll('[data-face]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  view.querySelectorAll('[data-face]').forEach(b => b.onclick = () => { newKid.face = b.dataset.face; view.querySelectorAll('[data-face]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  view.querySelectorAll('[data-gender]').forEach(b => b.onclick = () => { newKid.name = document.getElementById('newName').value; newKid.gender = b.dataset.gender; parentDash(); });
   document.getElementById('addKid').onclick = () => {
     const name = document.getElementById('newName').value.trim();
     if (!name) { document.getElementById('addErr').innerHTML = '<div class="err">Type the child\'s name.</div>'; return; }
-    S.kids.push({ id: 'k' + b64(randBytes(6)), name, face, grade: +document.getElementById('newGrade').value, play: C().starterPlayCredits, earned: 0, recent: [], stats: {}, games: [], cred: null });
-    save(); parentDash();
+    S.kids.push({ id: 'k' + b64(randBytes(6)), name, face: newKid.face, gender: newKid.gender, grade: +document.getElementById('newGrade').value, play: C().starterPlayCredits, earned: 0, recent: [], stats: {}, games: [], cred: null });
+    newKid.name = ''; save(); parentDash();
   };
   view.querySelectorAll('[data-payout]').forEach(b => b.onclick = () => { S.kids.find(k => k.id === b.dataset.payout).earned = 0; save(); parentDash(); });
   if (NET.on) bindOnlineBuy(pack);
