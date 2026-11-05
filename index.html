@@ -987,7 +987,7 @@ function onlineBuyPanel(pack) {
   if (!NET.user) return `<section class="panel"><h2>Sign in to buy play credits</h2>
     <p class="muted" style="margin:0;font-size:.9rem">Play credits are kept in your parent account, so they work on every device you sign in on. Type your email and we'll send you a sign-in link. No password needed.</p>
     <form class="row" id="signIn"><input id="email" type="email" required autocomplete="email" placeholder="you@example.com" style="flex:1;min-width:180px"><button class="btn">Email me a link</button></form>
-    ${buy.msg ? `<div class="toast" role="status">${buy.msg}</div>` : ''}</section>`;
+    ${buy.msg ? `<div class="${buy.bad ? 'err' : 'toast'}" role="status">${buy.msg}</div>` : ''}</section>`;
   const recent = NET.purchases.map(p => `<tr><td class="num">${p.created_at.slice(0, 10)}</td><td>${p.kind === 'gift' ? 'Gift' : 'Card'}</td><td class="num">${p.credits}</td><td class="num">${p.kind === 'gift' ? '–' : new Intl.NumberFormat(undefined, { style: 'currency', currency: p.currency || REG().currency }).format(p.amount)}</td></tr>`).join('');
   return `<section class="panel">
     <h2>Buy play credits</h2>
@@ -1005,7 +1005,10 @@ function bindOnlineBuy(pack) {
     e.preventDefault();
     const email = document.getElementById('email').value.trim();
     const { error } = await NET.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: SITE } });
-    buy.msg = error ? `Couldn't send the link: ${esc(error.message)}` : `Check ${esc(email)} for the sign-in link, and open it on this device.`;
+    buy.bad = !!error;
+    buy.msg = !error ? `Check ${esc(email)} for the sign-in link (look in spam too), and open it on this device.`
+      : /rate limit/i.test(error.message) ? 'Too many sign-in emails were sent in the last hour. Check your inbox for an earlier link, or try again in an hour.'
+      : `Couldn't send the link: ${esc(error.message)}`;
     parentDash();
   };
   view.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => { buy.pack = b.dataset.pack; buy.msg = ''; parentDash(); });
