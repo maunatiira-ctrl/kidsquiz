@@ -494,7 +494,7 @@ function kidHome() {
   }
   view.innerHTML = `<section class="sheet">
     <h2 style="font-size:1.8rem">Who is playing?</h2>
-    <p class="muted" style="margin:4px 0 0">Tap your name, then touch the fingerprint sensor.</p>
+    <p class="muted" style="margin:4px 0 0">Tap your name to start.</p>
     <div class="kids">${S.kids.map(k => `<button class="kidcard" data-kid="${k.id}">
         <span class="face">${k.face}</span><span class="name">${esc(k.name)}</span>
         <span><span class="chip grade">${yearOf(k.grade)}</span></span>${wallet(k)}</button>`).join('')}</div></section>`;
@@ -503,16 +503,18 @@ function kidHome() {
 
 function fingerprint(kid) {
   const canFinger = passkeyReady && kid.cred;
+  // No PIN for children (Mesta, 2026-11-05): without a fingerprint set up, the child goes straight in.
+  if (!canFinger) return pickSubject(kid);
   view.innerHTML = `<section class="sheet"><div class="finger">
     <h2 style="font-size:1.8rem">Hi ${esc(kid.name)}! ${kid.face}</h2>
     ${canFinger
       ? `<button class="pad" id="pad" aria-label="Tap, then touch the fingerprint sensor">👆</button>
          <p class="muted" id="fpMsg">Tap the circle, then touch the fingerprint sensor.</p>`
       : `<p class="muted" id="fpMsg">${passkeyReady ? 'Your fingerprint isn\'t set up yet.' : 'This device or browser can\'t check fingerprints.'}<br>A parent can type the PIN to let you in.</p>`}
-    <div class="row" style="justify-content:center"><button class="btn ghost" id="askParent">A parent will type the PIN</button><button class="btn ghost" id="back">Not me</button></div>
+    <div class="row" style="justify-content:center"><button class="btn ghost" id="askParent">Play without fingerprint</button><button class="btn ghost" id="back">Not me</button></div>
     <div id="pinBox"></div></div></section>`;
   document.getElementById('back').onclick = kidHome;
-  document.getElementById('askParent').onclick = () => pinForm(document.getElementById('pinBox'), 'Parent PIN', () => pickSubject(kid));
+  document.getElementById('askParent').onclick = () => pickSubject(kid);
   const pad = document.getElementById('pad');
   if (pad) pad.onclick = async () => {
     const msg = document.getElementById('fpMsg');
@@ -1177,7 +1179,7 @@ function parentDash() {
     <button class="btn" id="addKid">Add child</button><div id="addErr" aria-live="polite"></div>
     <p class="muted" style="margin:0;font-size:.85rem">${passkeyReady
       ? 'After adding, tap “Set up fingerprint” with the child next to you. The device will ask for a fingerprint. Any finger saved in this device’s settings will work, so on a shared device save only the children’s fingers.'
-      : 'This device or browser can’t check fingerprints, so children will need the parent PIN to start. Fingerprint login works in Chrome on Android, and Safari or Chrome on a Mac with Touch ID.'}</p>
+      : 'This device or browser can’t check fingerprints. Children just tap their name to start. Fingerprint login works in Chrome on Android, and Safari or Chrome on a Mac with Touch ID.'}</p>
   </section>`;
 
   const pack = cfg.creditPacks.find(p => p.id === buy.pack);
