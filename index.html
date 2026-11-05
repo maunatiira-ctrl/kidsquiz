@@ -283,7 +283,7 @@ function applyHostSettings(h) {
   Object.assign(C(), { questionsPerGame: h.questions_per_game, playCreditsPerGame: h.play_credits_per_game,
     rewardCreditsPerCorrectAnswer: h.reward_per_correct, perfectGameBonus: h.perfect_bonus, starterPlayCredits: h.starter_credits,
     creditPacks: h.packs.map(p => ({ id: p.id, credits: +p.credits, aud: +p.aud, nzd: +p.nzd })),
-    bank: h.bank || {}, cardPayments: h.card_payments !== false });
+    bank: h.bank || {}, cardPayments: h.card_payments !== false, cashout: h.cashout || {} });
 }
 const loadScript = (src) => new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
 async function netStart() {
@@ -329,7 +329,14 @@ async function netRefresh() {
   NET.kidCredits = (fam.data && fam.data.kid_credits) || {};
   NET.host = host.data === true;
   NET.hostPending = 0;
-  if (NET.host) { const pc = await NET.sb.from('topups').select('id', { count: 'exact', head: true }).eq('status', 'pending'); NET.hostPending = pc.count || 0; }
+  NET.cashouts = [];
+  const co = await NET.sb.from('cashouts').select('id,created_at,kid_id,kid_name,stars,amount,currency,status,note').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(10);
+  if (!co.error) NET.cashouts = co.data || [];
+  if (NET.host) {
+    const [pc, pco] = await Promise.all([NET.sb.from('topups').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      NET.sb.from('cashouts').select('id', { count: 'exact', head: true }).eq('status', 'pending')]);
+    NET.hostPending = (pc.count || 0) + (pco.error ? 0 : pco.count || 0);
+  }
   NET.purchases = pur.data || [];
   updateTabs();
 }
@@ -340,7 +347,7 @@ function updateTabs() {
   let al = document.getElementById('hostAlert');
   if (NET.host && NET.hostPending) {
     if (!al) { al = document.createElement('a'); al.id = 'hostAlert'; al.className = 'hostalert'; document.querySelector('.wrap').prepend(al); }
-    al.href = '#host'; al.textContent = `🔔 ${NET.hostPending} top-up${NET.hostPending === 1 ? '' : 's'} waiting for you to check. Open the host page.`;
+    al.href = '#host'; al.textContent = `🔔 ${NET.hostPending} request${NET.hostPending === 1 ? '' : 's'} (top-ups or cash-outs) waiting for you to check. Open the host page.`;
   } else if (al) al.remove();
   document.getElementById('footNote').textContent = NET.on
     ? 'Children\'s progress is saved on this device. Play credits are kept in the parent\'s account.'
@@ -1129,6 +1136,56 @@ function onlineBuyPanel(pack) {
     ${ledgerBox(NET.ledger.filter(r => !r.kid_id || !S.kids.some(k => k.id === r.kid_id)), `Shared family credits (🎟 ${NET.balance} left)`)}
   </section>`;
 }
+// Cash-out: parents ask to turn a child's ★ into money. The host checks and pays by bank transfer.
+const coState = { kid: null, msg: '', bad: false };
+const CO_STATUS = { pending: ['⏳ Waiting for the host', 'muted'], paid: ['✓ Paid', 'ok-chip'], rejected: ['✕ Declined, ★ returned', 'err-text'] };
+function cashoutPanel() {
+  const r = C().cashout || {};
+  if (!NET.user || NET.recovery || !r.enabled || !S.kids.length) return '';
+  if (!S.kids.some(k => k.id === coState.kid)) coState.kid = S.kids[0].id;
+  const kid = S.kids.find(k => k.id === coState.kid), cur = REG().currency, rate = +r[cur.toLowerCase()] || 0;
+  const have = starBal(kid), month = new Date().toISOString().slice(0, 7);
+  const used = NET.cashouts.filter(c => c.kid_id === kid.id && c.status !== 'rejected' && c.created_at.startsWith(month)).reduce((a, c) => a + c.stars, 0);
+  const max = Math.max(0, Math.min(have, (+r.monthly_cap || 0) - used)), min = +r.min_stars || 1, pay = S.payout || {};
+  const rows = NET.cashouts.map(c => `<tr><td class="num">${c.created_at.slice(0, 10)}</td><td>${esc(c.kid_name || '')}</td><td class="num">★ ${c.stars}</td><td class="num">${fmtMoney(c.amount, c.currency)}</td>
+    <td><span class="${CO_STATUS[c.status][1]}">${CO_STATUS[c.status][0]}</span>${c.note ? `<br><span class="muted">${esc(c.note)}</span>` : ''}</td></tr>`).join('');
+  return `<section class="panel">
+    <h2>Cash out ★</h2>
+    <p class="muted" style="margin:0;font-size:.9rem">Each ★ is worth <b>${fmtMoney(rate, cur)}</b>. You can cash out from <b>★ ${min}</b>, up to <b>★ ${+r.monthly_cap || 0}</b> per child each month. The host checks the request and pays into your bank account.</p>
+    <label class="f" for="coKid">Child<select id="coKid">${S.kids.map(k => `<option value="${k.id}" ${k.id === kid.id ? 'selected' : ''}>${k.face} ${esc(k.name)} (★ ${starBal(k)})</option>`).join('')}</select></label>
+    ${max < min ? `<p class="muted" style="margin:0">${esc(kid.name)} needs at least ★ ${min} to cash out${used ? ` (this month's limit is nearly used)` : ''}. Keep playing!</p>` : `
+    <form class="acct" id="coForm">
+      <label class="f" for="coStars">How many ★? (${min} to ${max})<input id="coStars" type="number" min="${min}" max="${max}" value="${max}" required></label>
+      <p style="margin:0">You'll get <b id="coMoney">${fmtMoney(max * rate, cur)}</b></p>
+      <label class="f" for="coName">Account name<input id="coName" type="text" required maxlength="80" value="${esc(pay.name || '')}"></label>
+      <label class="f" for="coBank">Bank<input id="coBank" type="text" maxlength="60" value="${esc(pay.bank || '')}"></label>
+      ${cur === 'AUD' ? `<label class="f" for="coBsb">BSB<input id="coBsb" type="text" maxlength="10" value="${esc(pay.bsb || '')}" placeholder="000-000"></label>` : ''}
+      <label class="f" for="coAcc">Account number<input id="coAcc" type="text" required maxlength="30" value="${esc(pay.acc || '')}"></label>
+      <button class="btn" id="coSend">Ask for cash-out</button>
+    </form>`}
+    ${coState.msg ? `<div class="${coState.bad ? 'err' : 'toast'}" role="status">${coState.msg}</div>` : ''}
+    ${rows ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Child</th><th class="num">★</th><th class="num">Money</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+  </section>`;
+}
+function bindCashout() {
+  const r = C().cashout || {}, rate = +r[REG().currency.toLowerCase()] || 0;
+  const ks = document.getElementById('coKid'); if (ks) ks.onchange = () => { coState.kid = ks.value; coState.msg = ''; parentDash(); };
+  const st = document.getElementById('coStars'); if (st) st.oninput = () => { document.getElementById('coMoney').textContent = fmtMoney((+st.value || 0) * rate, REG().currency); };
+  const f = document.getElementById('coForm');
+  if (f) f.onsubmit = async (e) => {
+    e.preventDefault();
+    const v = (id) => (document.getElementById(id) || { value: '' }).value.trim();
+    const kid = S.kids.find(k => k.id === coState.kid);
+    S.payout = { name: v('coName'), bank: v('coBank'), bsb: v('coBsb'), acc: v('coAcc') }; save();
+    document.getElementById('coSend').disabled = true;
+    const { error } = await NET.sb.rpc('request_cashout', { p_kid: kid.id, p_kid_name: kid.name, p_stars: Math.round(+v('coStars')), p_currency: REG().currency,
+      p_account_name: S.payout.name, p_bank: S.payout.bank, p_bsb: S.payout.bsb, p_account: S.payout.acc });
+    const why = { cashout_off: 'Cash-outs are switched off right now.', below_minimum: 'That is below the minimum.', not_enough_stars: `${esc(kid.name)} doesn't have that many ★.`,
+      over_monthly_cap: 'That goes over this month\'s limit.', no_bank: 'Please fill in the account name and number.' };
+    if (error) { coState.bad = true; coState.msg = why[(Object.keys(why).find(k => error.message.includes(k)))] || 'The request could not be sent. Please try again.'; return parentDash(); }
+    await netRefresh(); coState.bad = false; coState.msg = `Sent! The host will check it and pay into your account.`; parentDash();
+  };
+}
 function bindOnlineBuy(pack) {
   const say = (msg, bad = false) => { buy.msg = msg; buy.bad = bad; parentDash(); };
   view.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { buy.mode = b.dataset.mode; buy.msg = ''; parentDash(); });
@@ -1237,7 +1294,7 @@ function parentDash() {
   view.innerHTML = `
   <div class="grid">${kidPanels}${addPanel}</div>
   <div class="grid" style="margin-top:16px">
-    ${NET.on ? onlineBuyPanel(pack) : `<section class="panel">
+    ${NET.on ? onlineBuyPanel(pack) + cashoutPanel() : `<section class="panel">
       <h2>Buy play credits</h2>
       <p class="muted" style="margin:0;font-size:.9rem">Payments are not switched on yet, so this is pretend: no money is charged.</p>
       <div class="packs">${cfg.creditPacks.map(p => packButton(p)).join('')}</div>
@@ -1290,7 +1347,7 @@ function parentDash() {
     newKid.name = ''; save(); parentDash();
   };
   view.querySelectorAll('[data-payout]').forEach(b => b.onclick = () => { S.kids.find(k => k.id === b.dataset.payout).earned = 0; save(); parentDash(); });
-  if (NET.on) bindOnlineBuy(pack);
+  if (NET.on) { bindOnlineBuy(pack); bindCashout(); }
   else {
   view.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => { if (!S.kids.length) { buy.msg = 'Add a child first.'; return parentDash(); } buy.pack = b.dataset.pack; buy.kid = document.getElementById('buyKid').value; buy.msg = ''; parentDash(); });
   document.getElementById('buyKid').onchange = (e) => { buy.kid = e.target.value; if (buy.pack) parentDash(); };
@@ -1326,10 +1383,13 @@ function parentDash() {
 
 // ---------- host settings (only for the host's account) ----------
 // Prices and game rules for every family. Saved in the online database, so parents can't change them.
-let hostDraft = null, hostMsg = '', hostInfoMsg = '', hostLedger = [];
+let hostDraft = null, hostMsg = '', hostInfoMsg = '', hostCoMsg = '', hostLedger = [], hostCashouts = [];
 async function saveHostSettings(okText) {
-  const { questions_per_game, play_credits_per_game, reward_per_correct, perfect_bonus, starter_credits, packs, bank, card_payments } = hostDraft;
-  const { data, error } = await NET.sb.from('host_settings').update({ questions_per_game, play_credits_per_game, reward_per_correct, perfect_bonus, starter_credits, packs, bank, card_payments, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
+  // Only send the settings this database has (newer setup steps add bank and cash-out settings).
+  const upd = { updated_at: new Date().toISOString() };
+  ['questions_per_game', 'play_credits_per_game', 'reward_per_correct', 'perfect_bonus', 'starter_credits', 'packs', 'bank', 'card_payments', 'cashout']
+    .forEach(k => { if (k in hostDraft) upd[k] = hostDraft[k]; });
+  const { data, error } = await NET.sb.from('host_settings').update(upd).eq('id', 1).select().single();
   if (error) return `<div class="err">Not saved: ${esc(error.message)}</div>`;
   applyHostSettings(data); hostDraft = JSON.parse(JSON.stringify(data));
   return `<div class="toast">${okText}</div>`;
@@ -1337,12 +1397,14 @@ async function saveHostSettings(okText) {
 async function hostPage() {
   if (!NET.host) return setTab('parent');
   view.innerHTML = `<section class="sheet"><p class="muted">Loading host settings…</p></section>`;
-  const [set, sales, fams, tops, led] = await Promise.all([
+  const [set, sales, fams, tops, led, cos] = await Promise.all([
     NET.sb.from('host_settings').select('*').eq('id', 1).single(),
     NET.sb.from('purchases').select('created_at,email,credits,amount,currency,kind').order('created_at', { ascending: false }).limit(100),
     NET.sb.from('families').select('user_id', { count: 'exact', head: true }),
     NET.sb.from('topups').select('*').order('created_at', { ascending: false }).limit(60),
-    NET.sb.from('ledger').select('*').order('created_at', { ascending: false }).limit(200)]);
+    NET.sb.from('ledger').select('*').order('created_at', { ascending: false }).limit(200),
+    NET.sb.from('cashouts').select('*').order('created_at', { ascending: false }).limit(60)]);
+  hostCashouts = cos.error ? [] : cos.data || [];
   hostLedger = led.data || [];
   if (set.error) { view.innerHTML = `<section class="sheet"><div class="err">Couldn't load the host settings. Reload and try again.</div></section>`; return; }
   if (!hostDraft) hostDraft = JSON.parse(JSON.stringify(set.data));
@@ -1364,6 +1426,15 @@ function renderHost(sales, families, topups = []) {
   const B = d.bank = d.bank || {}; B.aud = B.aud || {}; B.nzd = B.nzd || {};
   const bf = (cur, key, label, ph = '') => `<label class="f" for="b_${cur}_${key}">${label}<input type="text" id="b_${cur}_${key}" data-bank="${cur}" data-key="${key}" value="${esc(B[cur][key] || '')}" placeholder="${ph}"></label>`;
   const pending = topups.filter(t => t.status === 'pending'), done = topups.filter(t => t.status !== 'pending').slice(0, 10);
+  const CO = d.cashout, coPending = hostCashouts.filter(c => c.status === 'pending'), coDone = hostCashouts.filter(c => c.status !== 'pending').slice(0, 10);
+  const coRow = (c) => `<div class="req">
+      <div class="kv"><b>For ${esc(c.kid_name || '')}: ★ ${c.stars} = ${fmt(c.amount, c.currency)}</b><span class="num">${c.created_at.slice(0, 10)}</span></div>
+      <div class="kv"><span>Parent: <b>${esc(c.full_name || '')}</b> · ${esc(c.email || '')}</span>${c.phone ? `<span class="num">📞 ${esc(c.phone)}</span>` : ''}</div>
+      <div class="kv"><span>Pay to <b>${esc(c.account_name)}</b>${c.bank_name ? `, ${esc(c.bank_name)}` : ''}</span><b class="num">${c.bsb ? esc(c.bsb) + ' · ' : ''}${esc(c.account_number)}</b></div>
+      <div class="row"><button class="btn" data-copaid="${c.id}">I've paid ${fmt(c.amount, c.currency)}</button>
+        <input type="text" id="conote${c.id}" placeholder="Reason if declined" style="flex:1;min-width:140px">
+        <button class="btn ghost" data-codecline="${c.id}">Decline</button></div>
+    </div>`;
   const reqRow = (t) => `<div class="req">
       <div class="kv"><b>For ${esc(t.kid_name || 'the family')}</b><span class="num">${t.created_at.slice(0, 10)}</span></div>
       <div class="kv"><span>Parent: <b>${esc(t.full_name || '')}</b></span></div>
@@ -1405,6 +1476,27 @@ function renderHost(sales, families, topups = []) {
       ${done.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Parent</th><th class="num">Paid</th><th>Result</th></tr></thead><tbody>
         ${done.map(t => `<tr><td class="num">${t.created_at.slice(0, 10)}</td><td style="overflow-wrap:anywhere">${esc(t.email)}</td><td class="num">${fmt(t.amount, t.currency)}</td><td>${t.status === 'approved' ? `✓ ${t.credits} added` : `✕ ${esc(t.note || 'Not approved')}`}</td></tr>`).join('')}</tbody></table></div>` : ''}
     </section>
+    ${CO ? `<section class="panel">
+      <h2>Cash-out requests ${coPending.length ? `<span class="chip play">${coPending.length} to pay</span>` : ''}</h2>
+      <p class="muted" style="margin:0;font-size:.85rem">Check the child's ledger, transfer the money from your bank, then press "I've paid". Declining gives the ★ back.</p>
+      <div class="reqs">${coPending.map(coRow).join('') || '<p class="muted" style="margin:0">No cash-outs waiting.</p>'}</div>
+      <div id="coMsg" aria-live="polite"></div>
+      ${coDone.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Child</th><th class="num">Money</th><th>Result</th></tr></thead><tbody>
+        ${coDone.map(c => `<tr><td class="num">${c.created_at.slice(0, 10)}</td><td>${esc(c.kid_name || '')}</td><td class="num">${fmt(c.amount, c.currency)}</td><td>${c.status === 'paid' ? '✓ Paid' : `✕ ${esc(c.note || 'Declined')}`}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    </section>
+    <section class="panel">
+      <h2>Cash-out rules</h2>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="coOn" ${CO.enabled ? 'checked' : ''}> Let parents cash out ★ for money</label>
+      <div class="cfg">
+        <label class="f" for="coAud">Value of 1 ★ (AUD)<input type="number" id="coAud" min="0" step="0.01" value="${CO.aud ?? 0.05}"></label>
+        <label class="f" for="coNzd">Value of 1 ★ (NZD)<input type="number" id="coNzd" min="0" step="0.01" value="${CO.nzd ?? 0.05}"></label>
+        <label class="f" for="coMin">Smallest cash-out (★)<input type="number" id="coMin" min="1" value="${CO.min_stars ?? 100}"></label>
+        <label class="f" for="coCap">Most per child each month (★)<input type="number" id="coCap" min="0" value="${CO.monthly_cap ?? 500}"></label>
+      </div>
+      <p class="muted" style="margin:0;font-size:.85rem">Example: ★ ${CO.monthly_cap ?? 500} a month at ${fmt(CO.aud ?? 0.05, 'AUD')} each is at most ${fmt((CO.monthly_cap ?? 500) * (CO.aud ?? 0.05), 'AUD')} per child per month.</p>
+      <div class="row"><button class="btn" id="saveCo">Save cash-out rules</button></div>
+      <div id="coRulesMsg" aria-live="polite">${hostCoMsg}</div>
+    </section>` : `<section class="panel"><h2>Cash-outs</h2><p class="muted" style="margin:0">Run step 13 on the setup page to switch on cash-outs.</p></section>`}
     <section class="panel">
       <h2>Info: bank account for top-ups</h2>
       <p class="muted" style="margin:0;font-size:.85rem">Parents see these details when they tap ⓘ in Top up. Leave a currency's account number empty to turn bank transfer off for it.</p>
@@ -1437,6 +1529,8 @@ function renderHost(sales, families, topups = []) {
     </section>
   </div>`;
   const keep = () => {
+    if (d.cashout && document.getElementById('coOn')) d.cashout = { enabled: document.getElementById('coOn').checked, aud: Math.max(0, +document.getElementById('coAud').value || 0),
+      nzd: Math.max(0, +document.getElementById('coNzd').value || 0), min_stars: Math.max(1, Math.round(+document.getElementById('coMin').value || 1)), monthly_cap: Math.max(0, Math.round(+document.getElementById('coCap').value || 0)) };
     view.querySelectorAll('[data-bank]').forEach(i => B[i.dataset.bank][i.dataset.key] = i.value.trim());
     B.instructions = document.getElementById('b_instr').value.trim();
     view.querySelectorAll('[data-h]').forEach(i => d[i.dataset.h] = Math.round(+i.value));
@@ -1454,6 +1548,17 @@ function renderHost(sales, families, topups = []) {
     hostMsg = await saveHostSettings('Saved. Every family sees the new rules and prices now.');
     again();
   };
+  const sc = document.getElementById('saveCo');
+  if (sc) sc.onclick = async () => { keep(); hostCoMsg = await saveHostSettings('Saved. Parents see the new cash-out rules now.'); again(); hostCoMsg = ''; };
+  view.querySelectorAll('[data-copaid],[data-codecline]').forEach(b => b.onclick = async () => {
+    keep();
+    const id = +(b.dataset.copaid || b.dataset.codecline), paid = !!b.dataset.copaid;
+    b.disabled = true;
+    const note = paid ? null : (document.getElementById('conote' + id).value.trim() || null);
+    const { error } = await NET.sb.rpc('host_decide_cashout', { p_id: id, p_paid: paid, p_note: note });
+    if (error) { document.getElementById('coMsg').innerHTML = `<div class="err">${/already_decided/.test(error.message) ? 'That request was already handled.' : esc(error.message)}</div>`; b.disabled = false; return; }
+    await netRefresh(); hostPage();
+  });
   document.getElementById('saveInfo').onclick = async () => {
     keep();
     hostInfoMsg = await saveHostSettings('Saved. Parents see these bank details when they top up.');
