@@ -314,7 +314,15 @@ async function netRefresh() {
     NET.sb.from('purchases').select('created_at,credits,amount,currency,kind').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(6),
     NET.sb.from('topups').select('id,created_at,credits,amount,currency,status,note,kid_name').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(6),
     NET.sb.from('ledger').select('created_at,kid_id,kid_name,kind,credits,stars,money,currency,note').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(300)]);
-  NET.stars = (fam.data && fam.data.stars) || {};
+  // Until step 12 (ledger) is run in Supabase, the stars column doesn't exist: fall back so credits still show.
+  let famData = fam.data;
+  for (const cols of ['play_credits,kid_credits', 'play_credits']) {
+    if (famData || !fam.error) break;
+    const r = await NET.sb.from('families').select(cols).eq('user_id', NET.user.id).maybeSingle();
+    if (!r.error) famData = r.data;
+  }
+  fam.data = famData;
+  NET.stars = (famData && famData.stars) || {};
   NET.ledger = led.data || [];
   NET.topups = tops.data || [];
   NET.balance = (fam.data && fam.data.play_credits) || 0;
@@ -645,7 +653,9 @@ function tutorial(kid, subject, i) {
 
 async function spendGame(kid) {
   if (NET.on) {
-    const { data, error } = await NET.sb.rpc('spend_game_for', { p_kid: kid.id, p_kid_name: kid.name });
+    let { data, error } = await NET.sb.rpc('spend_game_for', { p_kid: kid.id, p_kid_name: kid.name });
+    if (error && /function|schema cache/i.test(error.message)) ({ data, error } = await NET.sb.rpc('spend_game_for', { p_kid: kid.id }));
+    if (error && /function|schema cache/i.test(error.message)) { const r = await NET.sb.rpc('spend_game'); error = r.error; data = { play_credits: r.data, kid_credits: NET.kidCredits }; }
     if (error) { await netRefresh().catch(() => {}); pickSubject(kid, 'Not enough play credits for a game. Ask a parent to add more.'); return false; }
     NET.balance = data.play_credits; NET.kidCredits = data.kid_credits || {}; NET.gameId = data.game_id;
   } else kid.play -= C().playCreditsPerGame;
