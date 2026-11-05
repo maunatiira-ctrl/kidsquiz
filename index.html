@@ -149,8 +149,23 @@ td.num, th.num { text-align: right; }
 input[type=text], input[type=password] { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; }
 .pin { display: grid; gap: 12px; max-width: 360px; }
 .tabs[hidden], .tabs button[hidden] { display: none; }
-input[type=email], input[type=number] { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; }
+input[type=email], input[type=number], input[type=tel] { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; }
 .packrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: end; }
+.acct { display: grid; gap: 10px; max-width: 420px; }
+.linkbtn { background: none; border: 0; padding: 4px 0; color: var(--accent); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.info { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--accent); background: var(--card); color: var(--accent); font: italic 800 1.05rem Georgia, serif; cursor: pointer; flex: none; }
+.info[aria-expanded="true"] { background: var(--accent); color: var(--card); }
+.bankinfo[hidden] { display: none; }
+.bankinfo { border: 2px dashed var(--accent); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; background: var(--accent-soft); }
+.kv { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.kv span { color: var(--muted); }
+.kv b { overflow-wrap: anywhere; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg button { font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.seg button[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.err-text { color: var(--bad); font-weight: 700; }
+.reqs { display: grid; gap: 10px; }
+.req { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
 .notice { padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .pin input[type=password] { font-size: 1.6rem; letter-spacing: .4em; text-align: center; }
 .err { padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-weight: 700; }
@@ -253,13 +268,15 @@ const playBal = (kid) => NET.on ? NET.balance : kid.play;
 function applyHostSettings(h) {
   Object.assign(C(), { questionsPerGame: h.questions_per_game, playCreditsPerGame: h.play_credits_per_game,
     rewardCreditsPerCorrectAnswer: h.reward_per_correct, perfectGameBonus: h.perfect_bonus, starterPlayCredits: h.starter_credits,
-    creditPacks: h.packs.map(p => ({ id: p.id, credits: +p.credits, aud: +p.aud, nzd: +p.nzd })) });
+    creditPacks: h.packs.map(p => ({ id: p.id, credits: +p.credits, aud: +p.aud, nzd: +p.nzd })),
+    bank: h.bank || {}, cardPayments: h.card_payments !== false });
 }
 const loadScript = (src) => new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
 async function netStart() {
   if (!NET.on) return;
   try {
     if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
+    NET.recovery = /type=recovery/.test(location.hash);
     NET.sb = window.supabase.createClient(ONLINE_CFG.supabaseUrl, ONLINE_CFG.supabaseAnonKey);
     const { data: { session } } = await NET.sb.auth.getSession();
     NET.user = session ? session.user : null;
@@ -268,6 +285,7 @@ async function netStart() {
     applyHostSettings(h);
     await netRefresh();
     NET.sb.auth.onAuthStateChange((ev, session) => {
+      if (ev === 'PASSWORD_RECOVERY') NET.recovery = true;
       const was = NET.user && NET.user.id, now = session && session.user;
       NET.user = now || null;
       if ((now && now.id) !== was) netRefresh().then(() => { if (tab !== 'kid' && !game) setTab(tab === 'host' && !NET.host ? 'parent' : tab); });
@@ -275,11 +293,13 @@ async function netStart() {
   } catch (e) { NET.err = 'Can\'t reach the Credit Quiz server right now. Check the internet and reload.'; }
 }
 async function netRefresh() {
-  if (!NET.user) { Object.assign(NET, { balance: 0, host: false, purchases: [] }); return updateTabs(); }
-  const [fam, host, pur] = await Promise.all([
+  if (!NET.user) { Object.assign(NET, { balance: 0, host: false, purchases: [], topups: [] }); return updateTabs(); }
+  const [fam, host, pur, tops] = await Promise.all([
     NET.sb.from('families').select('play_credits').eq('user_id', NET.user.id).maybeSingle(),
     NET.sb.rpc('is_host'),
-    NET.sb.from('purchases').select('created_at,credits,amount,currency,kind').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(6)]);
+    NET.sb.from('purchases').select('created_at,credits,amount,currency,kind').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(6),
+    NET.sb.from('topups').select('id,created_at,credits,amount,currency,status,note').eq('user_id', NET.user.id).order('created_at', { ascending: false }).limit(6)]);
+  NET.topups = tops.data || [];
   NET.balance = (fam.data && fam.data.play_credits) || 0;
   NET.host = host.data === true;
   NET.purchases = pur.data || [];
@@ -289,7 +309,7 @@ function updateTabs() {
   // The Host tab is hidden for everyone. The host opens it with the secret address ending in #host.
   const t = document.getElementById('tabHost'); if (t) t.hidden = !(NET.host && location.hash === '#host');
   document.getElementById('footNote').textContent = NET.on
-    ? 'Children\'s progress is saved on this device. Play credits are kept in the parent\'s account. Payments are handled securely by Stripe.'
+    ? 'Children\'s progress is saved on this device. Play credits are kept in the parent\'s account.'
     : 'Progress is saved on this device only. Payments are not switched on yet, so purchases are pretend.';
 }
 
@@ -550,6 +570,7 @@ async function boot() {
     return;
   }
   if (location.hash === '#host' && NET.host) return setTab('host');
+  if (NET.recovery) return setTab('parent');
   kidHome();
 }
 window.addEventListener('hashchange', () => { updateTabs(); if (location.hash === '#host' && NET.host && S.parent) setTab('host'); else if (tab === 'host') setTab('kid'); });
@@ -981,43 +1002,136 @@ function tryWord(t, btn, out) {
 // ---------- parent dashboard ----------
 const packButton = (p) => `<button class="pack" data-pack="${p.id}" aria-pressed="${buy.pack === p.id}"><b class="num">🎟 ${p.credits}</b><span class="num">${money(packPrice(p))}</span><span class="muted" style="font-size:.78rem">${Math.floor(p.credits / Math.max(1, C().playCreditsPerGame))} games</span></button>`;
 
-// Real payments: the parent signs in with their email, picks a pack and pays on Stripe's page.
+// Online top-ups. The parent registers once (email + password, remembered on this device),
+// then tops up by bank transfer with a receipt (the host checks it) or by card (Stripe), if the host allows it.
+const fmtMoney = (v, c) => new Intl.NumberFormat(undefined, { style: 'currency', currency: c || REG().currency }).format(v);
+const myRef = () => NET.user ? 'CQ-' + NET.user.id.replace(/-/g, '').slice(0, 6).toUpperCase() : '';
+const bankFor = (cur) => { const b = (C().bank || {})[cur.toLowerCase()] || {}; return b.accountNumber ? b : null; };
+const STATUS = { pending: ['⏳ Waiting for the host to check', 'muted'], approved: ['✓ Credits added', 'ok-chip'], rejected: ['✕ Not approved', 'err-text'] };
+function accountPanel() {
+  const m = buy.mode || 'signin', msg = buy.msg ? `<div class="${buy.bad ? 'err' : 'toast'}" role="status">${buy.msg}</div>` : '';
+  if (NET.recovery && NET.user) return `<section class="panel"><h2>Choose a new password</h2>
+    <form class="acct" id="newPw"><label class="f" for="pw1">New password<input id="pw1" type="password" minlength="6" required autocomplete="new-password"></label>
+    <button class="btn">Save new password</button></form>${msg}</section>`;
+  const title = m === 'signup' ? 'Register to top up play credits' : m === 'forgot' ? 'Forgot your password?' : 'Sign in to top up play credits';
+  return `<section class="panel"><h2>${title}</h2>
+    <p class="muted" style="margin:0;font-size:.9rem">${m === 'forgot' ? 'Type your email and we\'ll send you a link to choose a new password.'
+      : 'You register once. This device remembers you, so next time you just top up. Play credits are shared by all your children.'}</p>
+    <form class="acct" id="acctForm">
+      ${m === 'signup' ? `<label class="f" for="fullName">Full name<input id="fullName" type="text" required maxlength="100" autocomplete="name" value="${esc(buy.fullName || '')}"></label>
+      <label class="f" for="phone">Phone number<input id="phone" type="tel" required maxlength="30" autocomplete="tel" value="${esc(buy.phone || '')}"></label>` : ''}
+      <label class="f" for="email">Email<input id="email" type="email" required autocomplete="email" placeholder="you@example.com" value="${esc(buy.email || '')}"></label>
+      ${m === 'forgot' ? '' : `<label class="f" for="pw">Password${m === 'signup' ? ' (at least 6 characters)' : ''}<input id="pw" type="password" minlength="6" required autocomplete="${m === 'signup' ? 'new-password' : 'current-password'}"></label>`}
+      <button class="btn">${m === 'signup' ? 'Register' : m === 'forgot' ? 'Send reset link' : 'Sign in'}</button>
+    </form>${msg}
+    <div class="row" style="font-size:.9rem">${m === 'signin'
+      ? `<button class="linkbtn" data-mode="signup">New here? Register</button><button class="linkbtn" data-mode="forgot">Forgot password?</button>`
+      : `<button class="linkbtn" data-mode="signin">I already registered: sign in</button>`}</div></section>`;
+}
 function onlineBuyPanel(pack) {
-  if (NET.err) return `<section class="panel"><h2>Buy play credits</h2><div class="err">${NET.err}</div></section>`;
-  if (!NET.user) return `<section class="panel"><h2>Sign in to buy play credits</h2>
-    <p class="muted" style="margin:0;font-size:.9rem">Play credits are kept in your parent account, so they work on every device you sign in on. Type your email and we'll send you a sign-in link. No password needed.</p>
-    <form class="row" id="signIn"><input id="email" type="email" required autocomplete="email" placeholder="you@example.com" style="flex:1;min-width:180px"><button class="btn">Email me a link</button></form>
-    ${buy.msg ? `<div class="${buy.bad ? 'err' : 'toast'}" role="status">${buy.msg}</div>` : ''}</section>`;
-  const recent = NET.purchases.map(p => `<tr><td class="num">${p.created_at.slice(0, 10)}</td><td>${p.kind === 'gift' ? 'Gift' : 'Card'}</td><td class="num">${p.credits}</td><td class="num">${p.kind === 'gift' ? '–' : new Intl.NumberFormat(undefined, { style: 'currency', currency: p.currency || REG().currency }).format(p.amount)}</td></tr>`).join('');
+  if (NET.err) return `<section class="panel"><h2>Top up play credits</h2><div class="err">${NET.err}</div></section>`;
+  if (!NET.user || NET.recovery) return accountPanel();
+  const cur = REG().currency, bank = bankFor(cur), card = C().cardPayments;
+  const methods = [bank && 'bank', card && 'card'].filter(Boolean);
+  if (!methods.includes(buy.method)) buy.method = methods[0];
+  const price = pack ? fmtMoney(packPrice(pack), cur) : '';
+  const info = bank ? `<div class="bankinfo" id="bankInfo" ${buy.showInfo === false ? 'hidden' : ''}>
+      <div class="kv"><span>Account name</span><b>${esc(bank.accountName || '')}</b></div>
+      ${bank.bankName ? `<div class="kv"><span>Bank</span><b>${esc(bank.bankName)}</b></div>` : ''}
+      ${bank.bsb ? `<div class="kv"><span>BSB</span><b class="num">${esc(bank.bsb)}</b></div>` : ''}
+      <div class="kv"><span>Account number</span><b class="num">${esc(bank.accountNumber)}</b></div>
+      ${pack ? `<div class="kv"><span>Amount</span><b class="num">${price}</b></div>` : ''}
+      <div class="kv"><span>Reference</span><b class="num">${myRef()}</b></div>
+      ${C().bank.instructions ? `<p style="margin:0">${esc(C().bank.instructions)}</p>` : ''}
+    </div>` : '';
+  const rows = [...NET.topups.map(t => ({ d: t.created_at, what: `🎟 ${t.credits}`, paid: fmtMoney(t.amount, t.currency), st: `<span class="${STATUS[t.status][1]}">${STATUS[t.status][0]}</span>${t.note ? `<br><span class="muted">${esc(t.note)}</span>` : ''}` })),
+    ...NET.purchases.filter(p => p.kind !== 'bank').map(p => ({ d: p.created_at, what: `🎟 ${p.credits}`, paid: p.kind === 'gift' ? 'Gift' : fmtMoney(p.amount, p.currency), st: '<span class="ok-chip">✓ Credits added</span>' }))]
+    .sort((a, b) => b.d.localeCompare(a.d)).slice(0, 8);
   return `<section class="panel">
-    <h2>Buy play credits</h2>
-    <p class="muted" style="margin:0;font-size:.9rem">Your family has <b>🎟 ${NET.balance} play credits</b>. Every child can use them. You pay by card on Stripe's secure page.</p>
-    <div class="packs">${C().creditPacks.map(p => packButton(p)).join('')}</div>
-    ${pack ? `<div class="confirm"><span>Buy <b>${pack.credits} play credits</b> for <b>${money(packPrice(pack))}</b>?</span>
-      <div class="row"><button class="btn" id="payNow">Pay ${money(packPrice(pack))} by card</button><button class="btn ghost" id="cancelBuy">Cancel</button></div></div>` : `<p class="muted" style="margin:0;font-size:.9rem">Pick a pack to continue.</p>`}
-    ${buy.msg ? `<div class="err" role="status">${buy.msg}</div>` : ''}
-    ${recent ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Credits</th><th class="num">Paid</th></tr></thead><tbody>${recent}</tbody></table></div>` : ''}
+    <h2>Top up play credits</h2>
+    <p class="muted" style="margin:0;font-size:.9rem">Your family has <b>🎟 ${NET.balance} play credits</b>. All your children use them.</p>
+    ${methods.length ? `<div class="eyebrow">1. Choose a pack</div>
+    <div class="packs">${C().creditPacks.map(p => packButton(p)).join('')}</div>` : `<p class="muted">Top-ups aren't open yet. Please check back soon.</p>`}
+    ${pack && methods.length ? `<div class="eyebrow">2. Pay ${price}</div>
+      ${methods.length > 1 ? `<div class="seg" role="tablist">${methods.map(m => `<button role="tab" data-method="${m}" aria-selected="${buy.method === m}">${m === 'bank' ? '🏦 Bank transfer' : '💳 Card'}</button>`).join('')}</div>` : ''}
+      ${buy.method === 'bank' ? `
+        <div class="row" style="align-items:center"><span style="flex:1;min-width:0">Transfer <b>${price}</b> to the bank account below, then send us your receipt.</span>
+          <button class="info" id="infoBtn" aria-expanded="${buy.showInfo !== false}" aria-controls="bankInfo" title="Bank account details">i</button></div>
+        ${info}
+        <form class="acct" id="receiptForm">
+          <label class="f" for="payEmail">Your email<input id="payEmail" type="email" required value="${esc(buy.payEmail || NET.user.email || '')}"></label>
+          <label class="f" for="receipt">Payment receipt (photo, screenshot or PDF)<input id="receipt" type="file" required accept="image/*,.pdf,application/pdf"></label>
+          <button class="btn" id="sendReceipt">Send receipt</button>
+        </form>
+        <p class="muted" style="margin:0;font-size:.85rem">The host checks your payment and adds the credits, usually within a day.</p>`
+      : `<div class="row"><button class="btn" id="payNow">Pay ${price} by card</button></div>
+        <p class="muted" style="margin:0;font-size:.85rem">You pay on Stripe's secure page. Credits are added straight away.</p>`}
+      <div class="row"><button class="btn ghost" id="cancelBuy">Choose another pack</button></div>` : methods.length ? `<p class="muted" style="margin:0;font-size:.9rem">Pick a pack to continue.</p>` : ''}
+    ${buy.msg ? `<div class="${buy.bad ? 'err' : 'toast'}" role="status">${buy.msg}</div>` : ''}
+    ${rows.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Credits</th><th class="num">Paid</th><th>Status</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td class="num">${r.d.slice(0, 10)}</td><td>${r.what}</td><td class="num">${r.paid}</td><td>${r.st}</td></tr>`).join('')}</tbody></table></div>` : ''}
   </section>`;
 }
 function bindOnlineBuy(pack) {
-  const f = document.getElementById('signIn');
-  if (f) f.onsubmit = async (e) => {
+  const say = (msg, bad = false) => { buy.msg = msg; buy.bad = bad; parentDash(); };
+  view.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { buy.mode = b.dataset.mode; buy.msg = ''; parentDash(); });
+  const af = document.getElementById('acctForm');
+  if (af) af.onsubmit = async (e) => {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const { error } = await NET.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: SITE } });
-    buy.bad = !!error;
-    buy.msg = !error ? `Check ${esc(email)} for the sign-in link (look in spam too), and open it on this device.`
-      : /rate limit/i.test(error.message) ? 'Too many sign-in emails were sent in the last hour. Check your inbox for an earlier link, or try again in an hour.'
-      : `Couldn't send the link: ${esc(error.message)}`;
-    parentDash();
+    const email = document.getElementById('email').value.trim(), pwEl = document.getElementById('pw'), password = pwEl ? pwEl.value : '', m = buy.mode || 'signin';
+    buy.email = email;
+    af.querySelector('button').disabled = true;
+    let res;
+    if (m === 'signup') {
+      buy.fullName = document.getElementById('fullName').value.trim(); buy.phone = document.getElementById('phone').value.trim();
+      if (buy.phone.replace(/\D/g, '').length < 8) { af.querySelector('button').disabled = false; return say('Please type a full phone number.', true); }
+      res = await NET.sb.auth.signUp({ email, password, options: { emailRedirectTo: SITE, data: { full_name: buy.fullName, phone: buy.phone } } });
+    }
+    else if (m === 'forgot') res = await NET.sb.auth.resetPasswordForEmail(email, { redirectTo: SITE });
+    else res = await NET.sb.auth.signInWithPassword({ email, password });
+    const err = res.error;
+    if (err) return say(/rate limit/i.test(err.message) ? 'Too many emails were sent in the last hour. Please try again later.'
+      : /invalid login/i.test(err.message) ? 'That email and password don\'t match. Check them, or tap "Forgot password?".'
+      : /already registered/i.test(err.message) ? 'This email is already registered. Sign in instead.' : esc(err.message), true);
+    if (m === 'forgot') return say(`Check ${esc(email)} for a link to choose a new password (look in spam too).`);
+    if (m === 'signup' && !(res.data && res.data.session)) return say(`Almost done: open the email we sent to ${esc(email)} to confirm, then sign in here.`);
+    NET.user = res.data.user; buy.msg = ''; buy.mode = 'signin';
+    await netRefresh(); parentDash();
+  };
+  const np = document.getElementById('newPw');
+  if (np) np.onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await NET.sb.auth.updateUser({ password: document.getElementById('pw1').value });
+    if (error) return say(esc(error.message), true);
+    NET.recovery = false; say('New password saved.');
   };
   view.querySelectorAll('[data-pack]').forEach(b => b.onclick = () => { buy.pack = b.dataset.pack; buy.msg = ''; parentDash(); });
-  const c = document.getElementById('cancelBuy'); if (c) c.onclick = () => { buy.pack = null; parentDash(); };
+  view.querySelectorAll('[data-method]').forEach(b => b.onclick = () => { buy.method = b.dataset.method; buy.msg = ''; parentDash(); });
+  const ib = document.getElementById('infoBtn');
+  if (ib) ib.onclick = () => { const box = document.getElementById('bankInfo'); box.hidden = !box.hidden; buy.showInfo = !box.hidden; ib.setAttribute('aria-expanded', !box.hidden); };
+  const c = document.getElementById('cancelBuy'); if (c) c.onclick = () => { buy.pack = null; buy.msg = ''; parentDash(); };
+  const rf = document.getElementById('receiptForm');
+  if (rf) rf.onsubmit = async (e) => {
+    e.preventDefault();
+    const file = document.getElementById('receipt').files[0], email = document.getElementById('payEmail').value.trim(), btn = document.getElementById('sendReceipt');
+    buy.payEmail = email;
+    if (!file) return say('Choose the receipt file first.', true);
+    if (file.size > 5 * 1024 * 1024) return say('That file is too big. Please send a file under 5 MB, for example a screenshot.', true);
+    btn.disabled = true; btn.textContent = 'Sending…';
+    const ext = ((file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg').slice(0, 5);
+    const path = `${NET.user.id}/${Date.now()}.${ext}`;
+    const up = await NET.sb.storage.from('receipts').upload(path, file, { contentType: file.type || undefined });
+    if (up.error) return say(/mime|type/i.test(up.error.message) ? 'Please send a photo, screenshot or PDF of the receipt.' : 'The receipt could not be sent. Please try again.', true);
+    const { error } = await NET.sb.rpc('request_topup', { p_pack: pack.id, p_currency: REG().currency, p_email: email, p_receipt_path: path });
+    if (error) return say(/bad_email/.test(error.message) ? 'Please check your email address.' : /too_many/.test(error.message) ? 'You already have 5 top-ups waiting to be checked. Please wait for the host.' : 'The receipt could not be sent. Please try again.', true);
+    buy.pack = null; await netRefresh();
+    say(`Thank you! Your receipt was sent. The host will check it and add ${pack.credits} play credits.`);
+  };
   const pay = document.getElementById('payNow');
   if (pay) pay.onclick = async () => {
     pay.disabled = true; pay.textContent = 'Opening the payment page…';
     const { data, error } = await NET.sb.functions.invoke('create-checkout', { body: { packId: pack.id, currency: REG().currency } });
-    if (error || !data || !data.url) { buy.msg = 'The payment page could not be opened. Please try again.'; return parentDash(); }
+    if (error || !data || !data.url) return say('The payment page could not be opened. Please try again.', true);
     location.href = data.url;
   };
 }
@@ -1153,23 +1267,51 @@ function parentDash() {
 
 // ---------- host settings (only for the host's account) ----------
 // Prices and game rules for every family. Saved in the online database, so parents can't change them.
-let hostDraft = null, hostMsg = '';
+let hostDraft = null, hostMsg = '', hostInfoMsg = '';
+async function saveHostSettings(okText) {
+  const { questions_per_game, play_credits_per_game, reward_per_correct, perfect_bonus, starter_credits, packs, bank, card_payments } = hostDraft;
+  const { data, error } = await NET.sb.from('host_settings').update({ questions_per_game, play_credits_per_game, reward_per_correct, perfect_bonus, starter_credits, packs, bank, card_payments, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
+  if (error) return `<div class="err">Not saved: ${esc(error.message)}</div>`;
+  applyHostSettings(data); hostDraft = JSON.parse(JSON.stringify(data));
+  return `<div class="toast">${okText}</div>`;
+}
 async function hostPage() {
   if (!NET.host) return setTab('parent');
   view.innerHTML = `<section class="sheet"><p class="muted">Loading host settings…</p></section>`;
-  const [set, sales, fams] = await Promise.all([
+  const [set, sales, fams, tops] = await Promise.all([
     NET.sb.from('host_settings').select('*').eq('id', 1).single(),
     NET.sb.from('purchases').select('created_at,email,credits,amount,currency,kind').order('created_at', { ascending: false }).limit(100),
-    NET.sb.from('families').select('user_id', { count: 'exact', head: true })]);
+    NET.sb.from('families').select('user_id', { count: 'exact', head: true }),
+    NET.sb.from('topups').select('*').order('created_at', { ascending: false }).limit(60)]);
   if (set.error) { view.innerHTML = `<section class="sheet"><div class="err">Couldn't load the host settings. Reload and try again.</div></section>`; return; }
   if (!hostDraft) hostDraft = JSON.parse(JSON.stringify(set.data));
-  renderHost(sales.data || [], fams.count || 0);
+  const topups = tops.data || [];
+  const links = {};
+  if (topups.length) {
+    const { data } = await NET.sb.storage.from('receipts').createSignedUrls(topups.map(t => t.receipt_path), 3600);
+    (data || []).forEach(d => { if (d.signedUrl) links[d.path] = d.signedUrl; });
+  }
+  topups.forEach(t => t.link = links[t.receipt_path]);
+  renderHost(sales.data || [], fams.count || 0, topups);
 }
-function renderHost(sales, families) {
+function renderHost(sales, families, topups = []) {
+  const again = () => renderHost(sales, families, topups);
   const d = hostDraft, month = new Date().toISOString().slice(0, 7);
   const totals = {};
-  sales.filter(p => p.kind === 'stripe' && p.created_at.startsWith(month)).forEach(p => totals[p.currency] = (totals[p.currency] || 0) + +p.amount);
+  sales.filter(p => p.kind !== 'gift' && p.created_at.startsWith(month)).forEach(p => totals[p.currency] = (totals[p.currency] || 0) + +p.amount);
   const fmt = (v, c) => new Intl.NumberFormat(undefined, { style: 'currency', currency: c || 'AUD' }).format(v);
+  const B = d.bank = d.bank || {}; B.aud = B.aud || {}; B.nzd = B.nzd || {};
+  const bf = (cur, key, label, ph = '') => `<label class="f" for="b_${cur}_${key}">${label}<input type="text" id="b_${cur}_${key}" data-bank="${cur}" data-key="${key}" value="${esc(B[cur][key] || '')}" placeholder="${ph}"></label>`;
+  const pending = topups.filter(t => t.status === 'pending'), done = topups.filter(t => t.status !== 'pending').slice(0, 10);
+  const reqRow = (t) => `<div class="req">
+      <div class="kv"><b>${esc(t.full_name || t.email)}</b><span class="num">${t.created_at.slice(0, 10)}</span></div>
+      <div class="kv"><span style="overflow-wrap:anywhere">${esc(t.email)}</span>${t.phone ? `<span class="num">📞 ${esc(t.phone)}</span>` : ''}</div>
+      <div class="kv"><span>🎟 ${t.credits} credits · <b class="num">${fmt(t.amount, t.currency)}</b></span><span>Reference <b class="num">${esc(t.reference)}</b></span></div>
+      <div class="row">${t.link ? `<a class="btn ghost" href="${t.link}" target="_blank" rel="noopener">View receipt</a>` : '<span class="muted">Receipt not found</span>'}
+        <button class="btn" data-approve="${t.id}">Add ${t.credits} credits</button>
+        <input type="text" id="note${t.id}" placeholder="Reason if not approved" style="flex:1;min-width:140px">
+        <button class="btn ghost" data-reject="${t.id}">Not approved</button></div>
+    </div>`;
   const num = (key, label, min, max) => `<label class="f" for="h_${key}">${label}<input type="number" id="h_${key}" data-h="${key}" min="${min}" max="${max}" value="${d[key]}"></label>`;
   view.innerHTML = `
   <div class="grid">
@@ -1194,6 +1336,26 @@ function renderHost(sales, families) {
       <p class="muted" style="margin:0;font-size:.85rem">Prices include any GST. Stripe keeps a small fee from each payment and sends the rest to your bank account.</p>
     </section>
     <section class="panel">
+      <h2>Top-up requests ${pending.length ? `<span class="chip play">${pending.length} to check</span>` : ''}</h2>
+      <p class="muted" style="margin:0;font-size:.85rem">Check your bank account for a payment with the same amount and reference, then add the credits.</p>
+      <div class="reqs">${pending.map(reqRow).join('') || '<p class="muted" style="margin:0">Nothing to check right now.</p>'}</div>
+      <div id="reqMsg" aria-live="polite"></div>
+      ${done.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Parent</th><th class="num">Paid</th><th>Result</th></tr></thead><tbody>
+        ${done.map(t => `<tr><td class="num">${t.created_at.slice(0, 10)}</td><td style="overflow-wrap:anywhere">${esc(t.email)}</td><td class="num">${fmt(t.amount, t.currency)}</td><td>${t.status === 'approved' ? `✓ ${t.credits} added` : `✕ ${esc(t.note || 'Not approved')}`}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    </section>
+    <section class="panel">
+      <h2>Info: bank account for top-ups</h2>
+      <p class="muted" style="margin:0;font-size:.85rem">Parents see these details when they tap ⓘ in Top up. Leave a currency's account number empty to turn bank transfer off for it.</p>
+      <div class="eyebrow">Australia (AUD)</div>
+      <div class="cfg">${bf('aud', 'accountName', 'Account name')}${bf('aud', 'bankName', 'Bank', 'e.g. Commonwealth Bank')}${bf('aud', 'bsb', 'BSB', '000-000')}${bf('aud', 'accountNumber', 'Account number')}</div>
+      <div class="eyebrow">New Zealand (NZD)</div>
+      <div class="cfg">${bf('nzd', 'accountName', 'Account name')}${bf('nzd', 'bankName', 'Bank', 'e.g. ANZ')}${bf('nzd', 'accountNumber', 'Account number', '00-0000-0000000-00')}</div>
+      <label class="f" for="b_instr">Message for parents (optional)<input type="text" id="b_instr" maxlength="200" value="${esc(B.instructions || '')}" placeholder="Credits are usually added within 24 hours."></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="cardOn" ${d.card_payments !== false ? 'checked' : ''}> Also let parents pay by card (Stripe)</label>
+      <div class="row"><button class="btn" id="saveInfo">Save bank details</button></div>
+      <div id="infoMsg" aria-live="polite">${hostInfoMsg}</div>
+    </section>
+    <section class="panel">
       <h2>Sales</h2>
       <div class="stats">
         <div class="stat"><b>${families}</b><span>Families</span></div>
@@ -1209,24 +1371,38 @@ function renderHost(sales, families) {
     </section>
   </div>`;
   const keep = () => {
+    view.querySelectorAll('[data-bank]').forEach(i => B[i.dataset.bank][i.dataset.key] = i.value.trim());
+    B.instructions = document.getElementById('b_instr').value.trim();
+    d.card_payments = document.getElementById('cardOn').checked;
     view.querySelectorAll('[data-h]').forEach(i => d[i.dataset.h] = Math.round(+i.value));
     view.querySelectorAll('[data-pk]').forEach(i => d.packs[+i.dataset.pk][i.dataset.field] = i.dataset.field === 'credits' ? Math.round(+i.value) : Math.round(+i.value * 100) / 100);
   };
-  view.querySelectorAll('[data-delpk]').forEach(b => b.onclick = () => { keep(); d.packs.splice(+b.dataset.delpk, 1); hostMsg = ''; renderHost(sales, families); });
-  document.getElementById('addPack').onclick = () => { keep(); d.packs.push({ id: 'pack_' + b64(randBytes(4)).replace(/[^a-z0-9]/gi, ''), credits: 20, aud: 2.99, nzd: 3.29 }); hostMsg = ''; renderHost(sales, families); };
+  view.querySelectorAll('[data-delpk]').forEach(b => b.onclick = () => { keep(); d.packs.splice(+b.dataset.delpk, 1); hostMsg = ''; again(); });
+  document.getElementById('addPack').onclick = () => { keep(); d.packs.push({ id: 'pack_' + b64(randBytes(4)).replace(/[^a-z0-9]/gi, ''), credits: 20, aud: 2.99, nzd: 3.29 }); hostMsg = ''; again(); };
   document.getElementById('undoHost').onclick = () => { hostDraft = null; hostMsg = ''; hostPage(); };
   document.getElementById('saveHost').onclick = async () => {
     keep();
     const bad = [['questions_per_game', 3, 20], ['play_credits_per_game', 0, 20], ['reward_per_correct', 0, 20], ['perfect_bonus', 0, 50], ['starter_credits', 0, 100]]
       .find(([k, lo, hi]) => !(d[k] >= lo && d[k] <= hi));
     const badPack = d.packs.find(p => !(p.credits >= 1) || !(p.aud >= 0.5) || !(p.nzd >= 0.5));
-    if (bad || badPack) { hostMsg = `<div class="err">${bad ? 'A game rule is outside its allowed range.' : 'Each pack needs at least 1 credit and a price of at least 0.50 (Stripe\'s smallest payment).'}</div>`; return renderHost(sales, families); }
-    const { questions_per_game, play_credits_per_game, reward_per_correct, perfect_bonus, starter_credits, packs } = d;
-    const { data, error } = await NET.sb.from('host_settings').update({ questions_per_game, play_credits_per_game, reward_per_correct, perfect_bonus, starter_credits, packs, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
-    if (error) hostMsg = `<div class="err">Not saved: ${esc(error.message)}</div>`;
-    else { applyHostSettings(data); hostDraft = JSON.parse(JSON.stringify(data)); hostMsg = '<div class="toast">Saved. Every family sees the new rules and prices now.</div>'; }
-    renderHost(sales, families);
+    if (bad || badPack) { hostMsg = `<div class="err">${bad ? 'A game rule is outside its allowed range.' : 'Each pack needs at least 1 credit and a price of at least 0.50 (Stripe\'s smallest payment).'}</div>`; return again(); }
+    hostMsg = await saveHostSettings('Saved. Every family sees the new rules and prices now.');
+    again();
   };
+  document.getElementById('saveInfo').onclick = async () => {
+    keep();
+    hostInfoMsg = await saveHostSettings('Saved. Parents see these bank details when they top up.');
+    again(); hostInfoMsg = '';
+  };
+  view.querySelectorAll('[data-approve],[data-reject]').forEach(b => b.onclick = async () => {
+    keep();
+    const id = +(b.dataset.approve || b.dataset.reject), ok = !!b.dataset.approve;
+    b.disabled = true;
+    const note = ok ? null : (document.getElementById('note' + id).value.trim() || null);
+    const { error } = await NET.sb.rpc('host_decide_topup', { p_id: id, p_approve: ok, p_note: note });
+    if (error) { document.getElementById('reqMsg').innerHTML = `<div class="err">${/already_decided/.test(error.message) ? 'That request was already handled.' : esc(error.message)}</div>`; b.disabled = false; return; }
+    hostPage();
+  });
   document.getElementById('gift').onsubmit = async (e) => {
     e.preventDefault(); keep();
     const email = document.getElementById('giftEmail').value.trim(), n = Math.round(+document.getElementById('giftN').value), m = document.getElementById('giftMsg');
