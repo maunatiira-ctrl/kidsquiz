@@ -286,7 +286,8 @@ async function netRefresh() {
   updateTabs();
 }
 function updateTabs() {
-  const t = document.getElementById('tabHost'); if (t) t.hidden = !NET.host;
+  // The Host tab is hidden for everyone. The host opens it with the secret address ending in #host.
+  const t = document.getElementById('tabHost'); if (t) t.hidden = !(NET.host && location.hash === '#host');
   document.getElementById('footNote').textContent = NET.on
     ? 'Children\'s progress is saved on this device. Play credits are kept in the parent\'s account. Payments are handled securely by Stripe.'
     : 'Progress is saved on this device only. Payments are not switched on yet, so purchases are pretend.';
@@ -548,8 +549,10 @@ async function boot() {
     document.getElementById('paidOk').onclick = kidHome;
     return;
   }
+  if (location.hash === '#host' && NET.host) return setTab('host');
   kidHome();
 }
+window.addEventListener('hashchange', () => { updateTabs(); if (location.hash === '#host' && NET.host && S.parent) setTab('host'); else if (tab === 'host') setTab('kid'); });
 
 function pickSubject(kid, note = '') {
   const cost = C().playCreditsPerGame, broke = playBal(kid) < cost;
